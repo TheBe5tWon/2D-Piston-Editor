@@ -22,7 +22,7 @@ for (let i = 0; i < totalGameTicks; i++) {
 let timelineT = null;
 let gameTick = 0;
 let lastGameTickMS;
-let gameTickDelay = 200;
+let gameTickDelay = 50;
 
 let thirdOf32 = 32 / 3;
 
