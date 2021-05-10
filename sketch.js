@@ -264,7 +264,20 @@ function draw() {
   noStroke();
   fill(0);
   textAlign(LEFT, TOP);
+  textSize(12);
   text(round(frameRate()), 0, 0);
+}
+
+function setKeyText() {
+  textSize(20);
+  textStyle(BOLD);
+  textAlign(CENTER, CENTER);
+}
+
+function setStringText() {
+  textSize(18);
+  textStyle(NORMAL);
+  textAlign(LEFT, CENTER);
 }
 
 function calcStart() {
@@ -345,6 +358,13 @@ function rotateSelected(B) {
 function timelineHandler() {
   gameTick++;
   let i = gameTick - 1;
+  for (let x = 0; x < editorWidth; x++) {
+    for (let y = 0; y < editorHeight; y++) {
+      if (blocks[x][y].block != null) {
+        blocks[x][y].block.update();
+      }
+    }
+  }
   for (let j = 0; j < timeline[i].length; j++) {
     for (let k = 0; k < timeline[i][j].length; k++) {
       let block = timeline[i][j][k][0];
@@ -352,7 +372,9 @@ function timelineHandler() {
     }
     for (let k = 0; k < timeline[i][j].length; k++) {
       let block = timeline[i][j][k][1];
-      if (block != undefined) block.f(block.b);
+      if (block != undefined) {
+        block.f(block.b);
+      }
     }
   }
   if (gameTick >= timeline.length) stopTimeline();
@@ -759,7 +781,8 @@ function mouseReleased() {
           let t = timeline[ind[0]][ind[1]];
           for (let i = 0; i < t.length; i++) {
             for (let j = 0; j < 2; j++) {
-              if (t[i][j] != undefined) timelineSelected.push({ind1: i, ind2: j});
+              if (t[i][j] != undefined)
+                timelineSelected.push({ ind1: i, ind2: j });
             }
           }
           timelineSelectInd = [ind[0], ind[1]];
@@ -884,20 +907,14 @@ function mouseReleased() {
               for (let i = 0; i < s1.length; i++) {
                 timeline[ind[0]][ind[1]][ind1 + i] = s1[i];
               }
-              timelineSelected = [
-                { ind1: ind[2], ind2: 0 },
-                undefined,
-              ];
+              timelineSelected = [{ ind1: ind[2], ind2: 0 }, undefined];
             } else if (ind[2] < ind1) {
               let s1 = timeline[ind[0]][ind[1]].slice(ind[2], ind1);
               s1.splice(0, 0, timeline[ind[0]][ind[1]][ind1]);
               for (let i = 0; i < s1.length; i++) {
                 timeline[ind[0]][ind[1]][ind[2] + i] = s1[i];
               }
-              timelineSelected = [
-                { ind1: ind[2], ind2: 0 },
-                undefined,
-              ];
+              timelineSelected = [{ ind1: ind[2], ind2: 0 }, undefined];
             }
           }
         } else if (

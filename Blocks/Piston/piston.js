@@ -27,7 +27,6 @@ class Piston {
           if (gameTick - this.extensionTick < 3) {
             toNextBlock = (gameTick - this.extensionTick + i) * thirdOf32;
           } else {
-            this.extending = false;
             toNextBlock = 32;
           }
         } else {
@@ -36,11 +35,8 @@ class Piston {
       } else {
         if (this.retractionTick != undefined && this.retracting) {
           if (gameTick - this.retractionTick < 3) {
-            if (gameTick - this.retractionTick == 2) this.p.movable = true;
             toNextBlock = 32 - (gameTick - this.retractionTick + i) * thirdOf32;
           } else {
-            this.retracting = false;
-            this.p.movable = true;
             toNextBlock = 0;
           }
         } else {
@@ -51,7 +47,6 @@ class Piston {
       y = this.p.y * 32;
       if (this.p.movingTick != undefined && this.p.moving) {
         if (gameTick - this.p.movingTick < 3) {
-          if (gameTick - this.p.movingTick == 2) this.p.movable = true;
           let toNextBlock = (gameTick - this.p.movingTick + i) * thirdOf32;
           switch (this.p.moveR) {
             case 0:
@@ -67,8 +62,6 @@ class Piston {
               x += 32 - toNextBlock;
               break;
           }
-        } else {
-          this.p.moving = false;
         }
       }
     } else {
@@ -202,6 +195,24 @@ class Piston {
         }
       } else {
         blocks[this.p.x + dir[0]][this.p.y + dir[1]].movable = true;
+      }
+    }
+  }
+
+  update() {
+    if (this.extensionTick != undefined && this.extending) {
+      if (gameTick - this.extensionTick == 3) this.extending = false;
+    }
+    if (this.retractionTick != undefined && this.retracting) {
+      if (gameTick - this.retractionTick == 3) {
+        this.retracting = false;
+        this.p.movable = true;
+      }
+    }
+    if (this.p.movingTick != undefined && this.p.moving) {
+      if (gameTick - this.p.movingTick == 3) {
+        this.p.moving = true;
+        this.p.movable = true;
       }
     }
   }

@@ -49,7 +49,6 @@ class Solid {
       y = this.p.y * 32;
       if (this.p.movingTick != undefined && this.p.moving) {
         if (gameTick - this.p.movingTick < 3) {
-          if (gameTick - this.p.movingTick == 2) this.p.movable = true;
           let toNextBlock = (gameTick - this.p.movingTick + i) * thirdOf32;
           switch (this.p.moveR) {
             case 0:
@@ -65,8 +64,6 @@ class Solid {
               x += 32 - toNextBlock;
               break;
           }
-        } else {
-          this.p.moving = false;
         }
       }
     } else {
@@ -75,6 +72,15 @@ class Solid {
     }
     this.ctx.drawImage(woolImg, 0, 0);
     c.image(this.g, x, y);
+  }
+
+  update() {
+    if (this.p.movingTick != undefined && this.p.moving) {
+      if (gameTick - this.p.movingTick == 3) {
+        this.p.moving = true;
+        this.p.movable = true;
+      }
+    }
   }
 
   clone(p) {
