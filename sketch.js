@@ -19,10 +19,10 @@ for (let i = 0; i < totalGameTicks; i++) {
   collapsed[i] = [];
 }
 
-let timelineT;
+let timelineT = null;
 let gameTick = 0;
 let lastGameTickMS;
-let gameTickDelay = 50;
+let gameTickDelay = 200;
 
 let thirdOf32 = 32 / 3;
 
@@ -51,18 +51,45 @@ let timelineSelectInd = new Array(2);
 let timelineSelected = [];
 let startingTimeline;
 
+let controls = [
+  { p1: 'G', s: 'Toggle Grid' },
+  { p1: '1', p1s: '-', p2: '9', s: 'Select a slot' },
+  { p1: 'click1', s: 'Place block', b: () => slot != 0 },
+  { p1: 'click1', s: 'Select a block', b: () => slot == 0 },
+  {
+    p1: 'leftArrow',
+    p2: 'rightArrow',
+    p2s: 'or',
+    p3: 'R',
+    s: 'Rotate',
+    b: () => slot != 0 || selected.length > 0,
+  },
+  { p1: 'Q', s: 'Edit blocks', b: () => slot != 0 },
+];
+
 let extensionF = (b) => b.extend();
 let retractionF = (b) => b.retract();
 
-function preload() {
+let loaded = 0;
+let loadF = () => {
+  loaded++;
+};function preload() {
+  let totalLoading = 0;
   for (let i = 0; i < 12; i++) {
-    pistonImages[i] = new Image(32, 32);
+    totalLoading++;
+    pistonImages[i] = new Image();
+    pistonImages[i].onload = loadF;
     pistonImages[i].src = `Blocks/Piston/piston${
       i < 4 ? '' : i < 8 ? '_sticky' : '_head'
     }${i % 4}.png`;
   }
-  woolImg = new Image(32, 32);
+  woolImg = new Image();
+  woolImg.onload = loadF;
   woolImg.src = `Blocks/SolidBlocks/wool.png`;
+  click1Img = new Image();
+  click1Img.onload = loadF;
+  click1Img.src = `Icons/mouse1.png`;
+  totalLoading += 3;
 }
 
 function setup() {
@@ -263,9 +290,79 @@ function draw() {
   }
   noStroke();
   fill(0);
+  if (timelineT == null) {
+    let y = 20;
+    for (let i = 0; i < controls.length; i++) {
+      if (controls[i].b) {
+        if (!controls[i].b()) continue;
+      }
+      let defW = 35;
+      let x = 5;
+      let midY = y + defW * 0.5;
+      for (let j = 1; controls[i][`p${j}`]; j++) {
+        let p = `p${j}`;
+        if (controls[i][p]) {
+          let tW = textWidth(controls[i][p]);
+          setKeyText();
+          switch (controls[i][p]) {
+            case 'click1':
+              drawingContext.drawImage(click1Img, x, y, defW, defW);
+              x += defW + 5;
+              break;
+            case 'leftArrow':
+              controlBox(x, y, defW, defW);
+              beginShape();
+              vertex(x + 25, midY - 10);
+              vertex(x + 10, midY);
+              vertex(x + 25, midY + 10);
+              endShape();
+              x += defW + 5;
+              break;
+            case 'rightArrow':
+              controlBox(x, y, defW, defW);
+              beginShape();
+              vertex(x + 10, midY - 10);
+              vertex(x + 25, midY);
+              vertex(x + 10, midY + 10);
+              endShape();
+              x += defW + 5;
+              break;
+            default:
+              let tW = textWidth(controls[i][p]);
+              w = max(defW, tW + 20);
+              controlBox(x, y, w, defW);
+              setKeyText();
+              text(controls[i][p], x + w * 0.5, midY);
+              x += w + 5;
+              break;
+          }
+          let pS = p + 's';
+          if (controls[i][pS]) {
+            let tW = textWidth(controls[i][pS]);
+            text(controls[i][pS], x + tW * 0.5, midY);
+            x += tW + 5;
+          }
+        }
+      }
+      setStringText();
+      text(controls[i].s, x, midY);
+      y += defW + 5;
+    }
+  }
+  noStroke();
+  fill(0);
   textAlign(LEFT, TOP);
   textSize(12);
   text(round(frameRate()), 0, 0);
+}
+
+function controlBox(x, y, w, h) {
+  push();
+  stroke(0);
+  strokeWeight(1);
+  fill(255);
+  rect(x, y, w, h, 5);
+  pop();
 }
 
 function setKeyText() {
@@ -471,6 +568,18 @@ function deleteFromTimeline(block) {
   }
 }
 
+function extendTimeline() {
+  for (let i = timeline.length - 4; i < timeline.length; i++) {
+    if (timeline[i].length > 1 || timeline[i][0].length > 0) {
+      for (let j = 0; j < 3; j++) {
+        timeline.push([[]]);
+        collapsed.push([]);
+      }
+      totalGameTicks += 3;
+    }
+  }
+}
+
 function drawTimelineNode(t, x, y, c = window) {
   switch (t) {
     case 'piston extend':
@@ -567,15 +676,11 @@ function mergeTimelineEnds(ind1, ind2) {
 function keyPressed() {
   for (let i = 1; i <= 9; i++) {
     if (key == i.toString()) {
-      if (slot == i) {
-        slot = 0;
-      } else {
-        putDownSelected();
-        slot = i;
-      }
+      if (slot == 0) putDownSelected();
+      slot = i;
     }
   }
-  if (key == ' ') {
+  if (keyCode == 32) {
     if (timelineT == null) {
       putDownSelected();
       calcStart();
@@ -588,7 +693,7 @@ function keyPressed() {
     } else {
       stopTimeline();
     }
-  } else if (key == 'g' && editing) {
+  } else if (keyCode == 71 && editing) {
     grid = !grid;
   } else if (keyCode == BACKSPACE || keyCode == DELETE) {
     if (selected.length > 0) {
@@ -607,7 +712,7 @@ function keyPressed() {
         rotateSelected(false);
       }
     }
-  } else if (keyCode == RIGHT_ARROW || key == 'r') {
+  } else if (keyCode == RIGHT_ARROW || keyCode == 82) {
     if (editing) {
       if (slot != 0) {
         defaultRotation = (defaultRotation + 1) % 4;
@@ -615,8 +720,10 @@ function keyPressed() {
         rotateSelected(true);
       }
     }
-  } else if (key == 'c') {
+  } else if (keyCode == 67) {
     if (editing && slot == 0) putDownSelected(false);
+  } else if (keyCode == 81) {
+    slot = 0;
   }
 }
 
@@ -834,6 +941,7 @@ function mouseReleased() {
           if (b) timelineSelected.push({ ind1: ind[2], ind2: ind2 });
         }
       }
+      extendTimeline();
       limitTimeline();
       setWind('editor');
     } else if (moveTimelineB && editing) {
@@ -890,6 +998,7 @@ function mouseReleased() {
           if (!keyIsDown(CONTROL)) {
             deleteTimelineSelected();
           }
+          extendTimeline();
           limitTimeline();
         } else if (timelineSelected.length == 1) {
           label: {
