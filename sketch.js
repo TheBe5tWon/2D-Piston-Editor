@@ -22,7 +22,7 @@ for (let i = 0; i < totalGameTicks; i++) {
 let timelineT;
 let gameTick = 0;
 let lastGameTickMS;
-let gameTickDelay = 50;
+let gameTickDelay = 200;
 
 let thirdOf32 = 32 / 3;
 
@@ -907,14 +907,14 @@ function mouseReleased() {
               for (let i = 0; i < s1.length; i++) {
                 timeline[ind[0]][ind[1]][ind1 + i] = s1[i];
               }
-              timelineSelected = [{ ind1: ind[2], ind2: 0 }, undefined];
+              timelineSelected = [{ ind1: ind[2], ind2: 0 }];
             } else if (ind[2] < ind1) {
               let s1 = timeline[ind[0]][ind[1]].slice(ind[2], ind1);
               s1.splice(0, 0, timeline[ind[0]][ind[1]][ind1]);
               for (let i = 0; i < s1.length; i++) {
                 timeline[ind[0]][ind[1]][ind[2] + i] = s1[i];
               }
-              timelineSelected = [{ ind1: ind[2], ind2: 0 }, undefined];
+              timelineSelected = [{ ind1: ind[2], ind2: 0 }];
             }
           }
         } else if (
