@@ -869,6 +869,13 @@ function keyPressed() {
         });
         output.settings.context = outputG.drawingContext;
       });
+    } else if (outputting == false) {
+      handlingOutput = false;
+      outFrameRateIn.remove();
+      outTickRateIn.remove();
+      outStartingTickIn.remove();
+      outEndingTickIn.remvoe();
+      outButton.remove();
     }
   }
 }
