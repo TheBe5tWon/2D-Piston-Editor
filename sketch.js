@@ -155,6 +155,7 @@ function draw() {
           stopTimeline();
           handlingOutput = false;
           outputting = false;
+          editing = true;
           windowResized();
           frameRate(144);
           return;
