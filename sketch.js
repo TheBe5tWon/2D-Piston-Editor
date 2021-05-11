@@ -51,7 +51,26 @@ let timelineSelectInd = new Array(2);
 let timelineSelected = [];
 let startingTimeline;
 
+let handlingOutput = false;
+let outputting = false;
+let outFrameRate;
+let outTickRate;
+let outEndingTick;
+let outStartingTick;
+let outFrameRateIn;
+let outTickRateIn;
+let outStartingTickIn;
+let outEndingTickIn;
+let outButton;
+let outFrameDelay;
+let outTickDelay;
+let outMS;
+let output;
+let outputG;
+
 let controls = [
+  { p1: 'Space', s: 'Stop Animation', b: () => timelineT != null },
+  { p1: 'Space', s: 'Play Animation' },
   { p1: 'G', s: 'Toggle Grid' },
   { p1: '1', p1s: '-', p2: '9', s: 'Select a slot' },
   { p1: 'click1', s: 'Place block', b: () => slot != 0 },
@@ -73,10 +92,9 @@ let retractionF = (b) => b.retract();
 let loaded = 0;
 let loadF = () => {
   loaded++;
-};function preload() {
-  let totalLoading = 0;
+};
+function preload() {
   for (let i = 0; i < 12; i++) {
-    totalLoading++;
     pistonImages[i] = new Image();
     pistonImages[i].onload = loadF;
     pistonImages[i].src = `Blocks/Piston/piston${
@@ -89,7 +107,6 @@ let loadF = () => {
   click1Img = new Image();
   click1Img.onload = loadF;
   click1Img.src = `Icons/mouse1.png`;
-  totalLoading += 3;
 }
 
 function setup() {
@@ -129,170 +146,213 @@ function setup() {
 }
 
 function draw() {
-  background(180);
-  wind.c.background(backgroundColor);
-  wind.c.noStroke();
-  let percentToNextTick;
-  if (timelineT != null && gameTick <= timeline.length) {
-    percentToNextTick = map(
-      Date.now() - lastGameTickMS,
-      0,
-      gameTickDelay,
-      0,
-      1
-    );
-  }
-  for (let y = 0; y < editorHeight; y++) {
-    for (let x = 0; x < editorWidth; x++) {
-      if (blocks[x][y].block != null)
-        blocks[x][y].show(wind.c, percentToNextTick);
+  if (handlingOutput) {
+    background(180);
+    if (outputting) {
+      while (round(gameTick * outTickDelay, 5) <= round(outMS, 5)) {
+        if (gameTick == outEndingTick) {
+          outputGif();
+          stopTimeline();
+          handlingOutput = false;
+          outputting = false;
+          windowResized();
+          frameRate(144);
+          return;
+        }
+        timelineHandler();
+      }
+      wind.c.background(backgroundColor);
+      let percentToNextTick = map(
+        outMS - lastGameTickMS,
+        0,
+        outTickDelay,
+        0,
+        1
+      );
+      for (let y = 0; y < editorHeight; y++) {
+        for (let x = 0; x < editorWidth; x++) {
+          if (blocks[x][y].block != null)
+            blocks[x][y].show(wind.c, percentToNextTick);
+        }
+      }
+      image(wind.c, 0, 0);
+      outputG.image(wind.c, 0, 0, wind.width / 2, wind.height / 2);
+      output.addFrame();
+      outMS += outFrameDelay;
+    } else {
+      textAlign(LEFT, CENTER);
+      textSize(16);
+      text('Frame Rate:', 0, 10);
+      text('Tick Rate:', 0, 30);
+      text('Starting Gametick:', 0, 50);
+      text('Ending Gametick:', 0, 70);
     }
-  }
-  if (editing && slot != 0 && wind.isPosWithin(mouseX, mouseY)) {
-    if (!mouseIsPressed || (mouseIsPressed && clickB)) {
-      if (slotArr[slot - 1] != undefined) {
-        let x = floor(wind.getCMouseX() / 32);
-        let y = floor(wind.getCMouseY() / 32);
-        wind.c.push();
-        wind.c.tint(0, 255, 255, 100);
-        let showBlock = slotArr[slot - 1].s.clone();
-        if (showBlock.r != undefined) showBlock.r = defaultRotation;
-        showBlock.show(wind.c, 0, x * 32, y * 32);
-        wind.c.pop();
+  } else {
+    background(180);
+    wind.c.background(backgroundColor);
+    wind.c.noStroke();
+    let percentToNextTick;
+    if (timelineT != null && gameTick <= timeline.length) {
+      percentToNextTick = map(
+        Date.now() - lastGameTickMS,
+        0,
+        gameTickDelay,
+        0,
+        1
+      );
+    }
+    for (let y = 0; y < editorHeight; y++) {
+      for (let x = 0; x < editorWidth; x++) {
+        if (blocks[x][y].block != null)
+          blocks[x][y].show(wind.c, percentToNextTick);
       }
     }
-  }
-  wind.c.push();
-  wind.c.tint(0, 255, 0, 100);
-  for (let block of selected) {
-    block.b.show(wind.c, 0, block.x * 32, block.y * 32);
-  }
-  wind.c.pop();
-  if (editing && grid) {
-    wind.c.stroke(0);
-    for (let x = 1; x < editorWidth; x++) {
-      wind.c.line(x * 32, 0, x * 32, 32 * editorWidth);
-    }
-    for (let y = 1; y < editorHeight; y++) {
-      wind.c.line(0, y * 32, 32 * editorHeight, y * 32);
-    }
-  }
-  if (dragSelect && editing && !clickB) {
-    wind.c.noStroke();
-    wind.c.fill(0, 255, 0, 100);
-    let vec = wind.getPosVector(mouseBeginX, mouseBeginY);
-    wind.c.push();
-    wind.c.rectMode(CORNERS);
-    wind.c.rect(vec.x, vec.y, wind.getCMouseX(), wind.getCMouseY());
-    wind.c.pop();
-  }
-  setWind('timeline');
-  wind.c.background(220);
-  wind.c.stroke(200);
-  for (let y = 25; y < wind.limiter.y2; y += 25) {
-    wind.c.line(0, y, timeline.length * 50, y);
-  }
-  wind.c.stroke(0);
-  for (let i = 1; i <= timeline.length; i++) {
-    wind.c.line(50 * i, 0, 50 * i, wind.limiter.y2);
-  }
-  for (let i = 0; i < timeline.length; i++) {
-    let y = 0;
-    for (let j = 0; j < timeline[i].length; j++) {
-      if (collapsed[i][j] == false) y += 25 * timeline[i][j].length;
-      y += 25;
-      wind.c.line(50 * i, y, 50 * (i + 1), y);
-    }
-  }
-  wind.c.fill(0);
-  wind.c.noStroke();
-  wind.c.push();
-  for (let i = 0; i < timeline.length; i++) {
-    let y = 0;
-    for (let j = 0; j < timeline[i].length; j++) {
-      if (collapsed[i][j] == true) {
-        wind.c.push();
-        wind.c.fill(170);
-        drawTimelineNode('expand', i * 50, y, wind.c);
-        wind.c.pop();
-      } else {
-        for (let k = 0; k < timeline[i][j].length; k++) {
-          drawTimelineNode(timeline[i][j][k][0].t, i * 50, y, wind.c);
-          if (timeline[i][j][k][1] != undefined)
-            drawTimelineNode(timeline[i][j][k][1].t, i * 50 + 25, y, wind.c);
-          let highlight = false;
-          for (let block of selected) {
-            if (timeline[i][j][k][0].b == block.b) highlight = true;
-          }
-          if (highlight) {
-            wind.c.push();
-            wind.c.fill(0, 255, 0, 50);
-            wind.c.rect(i * 50, y, 50, 25);
-            wind.c.pop();
-          }
-          if (i == timelineSelectInd[0] && j == timelineSelectInd[1]) {
-            for (let ob of timelineSelected) {
-              if (k == ob.ind1 && ob.ind2 == 0) {
-                wind.c.push();
-                wind.c.fill(0, 255, 255, 100);
-                wind.c.rect(i * 50, y, 25, 25);
-                wind.c.pop();
-              } else if (k == ob.ind1 && ob.ind2 == 1) {
-                wind.c.push();
-                wind.c.fill(0, 255, 255, 100);
-                wind.c.rect(i * 50 + 25, y, 25, 25);
-                wind.c.pop();
-              }
-            }
-          }
-          y += 25;
-        }
-        if (collapsed[i][j] == false) {
+    if (editing && slot != 0 && wind.isPosWithin(mouseX, mouseY)) {
+      if (!mouseIsPressed || (mouseIsPressed && clickB)) {
+        if (slotArr[slot - 1] != undefined) {
+          let x = floor(wind.getCMouseX() / 32);
+          let y = floor(wind.getCMouseY() / 32);
           wind.c.push();
-          wind.c.fill(170);
-          drawTimelineNode('collapse', i * 50, y, wind.c);
+          wind.c.tint(0, 255, 255, 100);
+          let showBlock = slotArr[slot - 1].s;
+          let oldR = showBlock.r;
+          if (showBlock.r != undefined) showBlock.r = defaultRotation;
+          showBlock.show(wind.c, 0, x * 32, y * 32);
+          showBlock.r = oldR;
           wind.c.pop();
         }
       }
-      y += 25;
     }
-  }
-  wind.c.pop();
-  if (timelineT != null && gameTick < timeline.length) {
-    wind.c.stroke(200, 0, 0);
-    wind.c.strokeWeight(2);
-    let x = (gameTick + percentToNextTick) * 50;
-    wind.c.line(x, 0, x, wind.limiter.y2);
-  }
-  setWind('editor');
-  drawAllWinds();
-  noFill();
-  stroke(0);
-  for (let i = 1; i <= 9; i++) {
-    if (slot == i) {
-      strokeWeight(5);
-    } else {
-      strokeWeight(2);
+    wind.c.push();
+    wind.c.tint(0, 255, 0, 100);
+    for (let block of selected) {
+      block.b.show(wind.c, 0, block.x * 32, block.y * 32);
     }
-    rect(width * 0.5 + (i - 5.5) * 50, height - 50 - timelineHeight, 50, 50);
-  }
-  if (slotArr.length > 0) {
-    for (let i = 0; i < 9; i++) {
-      if (slotArr[i] != undefined) {
-        slotArr[i].s.show(
-          window,
-          0,
-          width * 0.5 + (i - 4.5) * 50 + 9,
-          height - 41 - timelineHeight
-        );
+    wind.c.pop();
+    if (editing && grid) {
+      wind.c.stroke(0);
+      for (let x = 1; x < editorWidth; x++) {
+        wind.c.line(x * 32, 0, x * 32, 32 * editorWidth);
+      }
+      for (let y = 1; y < editorHeight; y++) {
+        wind.c.line(0, y * 32, 32 * editorHeight, y * 32);
       }
     }
-  }
-  noStroke();
-  fill(0);
-  if (timelineT == null) {
+    if (dragSelect && editing && !clickB) {
+      wind.c.noStroke();
+      wind.c.fill(0, 255, 0, 100);
+      let vec = wind.getPosVector(mouseBeginX, mouseBeginY);
+      wind.c.push();
+      wind.c.rectMode(CORNERS);
+      wind.c.rect(vec.x, vec.y, wind.getCMouseX(), wind.getCMouseY());
+      wind.c.pop();
+    }
+    setWind('timeline');
+    wind.c.background(220);
+    wind.c.stroke(200);
+    for (let y = 25; y < wind.limiter.y2; y += 25) {
+      wind.c.line(0, y, timeline.length * 50, y);
+    }
+    wind.c.stroke(0);
+    for (let i = 1; i <= timeline.length; i++) {
+      wind.c.line(50 * i, 0, 50 * i, wind.limiter.y2);
+    }
+    for (let i = 0; i < timeline.length; i++) {
+      let y = 0;
+      for (let j = 0; j < timeline[i].length; j++) {
+        if (collapsed[i][j] == false) y += 25 * timeline[i][j].length;
+        y += 25;
+        wind.c.line(50 * i, y, 50 * (i + 1), y);
+      }
+    }
+    wind.c.fill(0);
+    wind.c.noStroke();
+    wind.c.push();
+    for (let i = 0; i < timeline.length; i++) {
+      let y = 0;
+      for (let j = 0; j < timeline[i].length; j++) {
+        if (collapsed[i][j] == true) {
+          wind.c.push();
+          wind.c.fill(170);
+          drawTimelineNode('expand', i * 50, y, wind.c);
+          wind.c.pop();
+        } else {
+          for (let k = 0; k < timeline[i][j].length; k++) {
+            drawTimelineNode(timeline[i][j][k][0].t, i * 50, y, wind.c);
+            if (timeline[i][j][k][1] != undefined)
+              drawTimelineNode(timeline[i][j][k][1].t, i * 50 + 25, y, wind.c);
+            let highlight = false;
+            for (let block of selected) {
+              if (timeline[i][j][k][0].b == block.b) highlight = true;
+            }
+            if (highlight) {
+              wind.c.push();
+              wind.c.fill(0, 255, 0, 50);
+              wind.c.rect(i * 50, y, 50, 25);
+              wind.c.pop();
+            }
+            if (i == timelineSelectInd[0] && j == timelineSelectInd[1]) {
+              for (let ob of timelineSelected) {
+                if (k == ob.ind1 && ob.ind2 == 0) {
+                  wind.c.push();
+                  wind.c.fill(0, 255, 255, 100);
+                  wind.c.rect(i * 50, y, 25, 25);
+                  wind.c.pop();
+                } else if (k == ob.ind1 && ob.ind2 == 1) {
+                  wind.c.push();
+                  wind.c.fill(0, 255, 255, 100);
+                  wind.c.rect(i * 50 + 25, y, 25, 25);
+                  wind.c.pop();
+                }
+              }
+            }
+            y += 25;
+          }
+          if (collapsed[i][j] == false) {
+            wind.c.push();
+            wind.c.fill(170);
+            drawTimelineNode('collapse', i * 50, y, wind.c);
+            wind.c.pop();
+          }
+        }
+        y += 25;
+      }
+    }
+    wind.c.pop();
+    if (timelineT != null && gameTick < timeline.length) {
+      wind.c.stroke(200, 0, 0);
+      wind.c.strokeWeight(2);
+      let x = (gameTick + percentToNextTick) * 50;
+      wind.c.line(x, 0, x, wind.limiter.y2);
+    }
+    setWind('editor');
+    drawAllWinds();
+    noFill();
+    stroke(0);
+    for (let i = 1; i <= 9; i++) {
+      if (slot == i) {
+        strokeWeight(5);
+      } else {
+        strokeWeight(2);
+      }
+      rect(width * 0.5 + (i - 5.5) * 50, height - 50 - timelineHeight, 50, 50);
+    }
+    if (slotArr.length > 0) {
+      for (let i = 0; i < 9; i++) {
+        if (slotArr[i] != undefined) {
+          slotArr[i].s.show(
+            window,
+            0,
+            width * 0.5 + (i - 4.5) * 50 + 9,
+            height - 41 - timelineHeight
+          );
+        }
+      }
+    }
+    noStroke();
+    fill(0);
     let y = 20;
-    for (let i = 0; i < controls.length; i++) {
+    for (let i = 0; i < (timelineT == null ? controls.length : 1); i++) {
       if (controls[i].b) {
         if (!controls[i].b()) continue;
       }
@@ -348,12 +408,12 @@ function draw() {
       text(controls[i].s, x, midY);
       y += defW + 5;
     }
+    noStroke();
+    fill(0);
+    textAlign(LEFT, TOP);
+    textSize(12);
+    text(round(frameRate()), 0, 0);
   }
-  noStroke();
-  fill(0);
-  textAlign(LEFT, TOP);
-  textSize(12);
-  text(round(frameRate()), 0, 0);
 }
 
 function controlBox(x, y, w, h) {
@@ -454,28 +514,35 @@ function rotateSelected(B) {
 
 function timelineHandler() {
   gameTick++;
-  let i = gameTick - 1;
-  for (let x = 0; x < editorWidth; x++) {
-    for (let y = 0; y < editorHeight; y++) {
-      if (blocks[x][y].block != null) {
-        blocks[x][y].block.update();
+  if (gameTick < timeline.length) {
+    let i = gameTick - 1;
+    for (let x = 0; x < editorWidth; x++) {
+      for (let y = 0; y < editorHeight; y++) {
+        if (blocks[x][y].block != null) {
+          blocks[x][y].block.update();
+        }
       }
     }
-  }
-  for (let j = 0; j < timeline[i].length; j++) {
-    for (let k = 0; k < timeline[i][j].length; k++) {
-      let block = timeline[i][j][k][0];
-      block.f(block.b);
-    }
-    for (let k = 0; k < timeline[i][j].length; k++) {
-      let block = timeline[i][j][k][1];
-      if (block != undefined) {
+    for (let j = 0; j < timeline[i].length; j++) {
+      for (let k = 0; k < timeline[i][j].length; k++) {
+        let block = timeline[i][j][k][0];
         block.f(block.b);
       }
+      for (let k = 0; k < timeline[i][j].length; k++) {
+        let block = timeline[i][j][k][1];
+        if (block != undefined) {
+          block.f(block.b);
+        }
+      }
     }
+    if (outputting == false) {
+      lastGameTickMS = Date.now();
+    } else {
+      lastGameTickMS = outMS;
+    }
+  } else {
+    if (!outputting) stopTimeline();
   }
-  if (gameTick >= timeline.length) stopTimeline();
-  lastGameTickMS = Date.now();
 }
 
 function startTimeline() {
@@ -485,7 +552,7 @@ function startTimeline() {
 }
 
 function stopTimeline() {
-  clearInterval(timelineT);
+  if (!outputting) clearInterval(timelineT);
   timelineT = null;
   editing = true;
   blocks = startingBlocks;
@@ -693,8 +760,8 @@ function keyPressed() {
     } else {
       stopTimeline();
     }
-  } else if (keyCode == 71 && editing) {
-    grid = !grid;
+  } else if (keyCode == 71) {
+    if (editing) grid = !grid;
   } else if (keyCode == BACKSPACE || keyCode == DELETE) {
     if (selected.length > 0) {
       for (let block of selected) {
@@ -703,7 +770,12 @@ function keyPressed() {
     } else if (timelineSelected.length > 0) {
       deleteTimelineSelected();
     }
-    if (!keyIsDown(CONTROL)) selected = [];
+    if (!keyIsDown(CONTROL)) {
+      for (let ob of selected) {
+        ob.b.g.remove();
+      }
+      selected = [];
+    }
   } else if (keyCode == LEFT_ARROW) {
     if (editing) {
       if (slot != 0) {
@@ -724,6 +796,80 @@ function keyPressed() {
     if (editing && slot == 0) putDownSelected(false);
   } else if (keyCode == 81) {
     slot = 0;
+  } else if (keyCode == 79) {
+    if (handlingOutput == false) {
+      putDownSelected();
+      handlingOutput = true;
+      editing = false;
+      if (timelineT != null) stopTimeline();
+      textSize(16);
+      outFrameRateIn = createInput(24, 'number');
+      outFrameRateIn.position(textWidth('Frame Rate:') + 10, 0);
+      outFrameRateIn.size(50);
+      outFrameRateIn.id('frameRate');
+      let element = document.getElementById('frameRate');
+      element.min = 10;
+      element.max = 30;
+      outTickRateIn = createInput(20, 'number');
+      outTickRateIn.position(textWidth('Tick Rate:') + 10, 20);
+      outTickRateIn.size(50);
+      outTickRateIn.id('tickRate');
+      element = document.getElementById('tickRate');
+      element.min = 1;
+      element.max = 80;
+      outStartingTickIn = createInput(1, 'number');
+      outStartingTickIn.position(textWidth('Starting Gametick:') + 10, 40);
+      outStartingTickIn.size(50);
+      outStartingTickIn.id('startTick');
+      element = document.getElementById('startTick');
+      element.min = 1;
+      element.max = totalGameTicks;
+      outEndingTickIn = createInput(totalGameTicks, 'number');
+      outEndingTickIn.position(textWidth('Ending Gametick:') + 10, 60);
+      outEndingTickIn.size(50);
+      outEndingTickIn.id('endTick');
+      element = document.getElementById('endTick');
+      element.min = 1;
+      element.max = totalGameTicks;
+      outButton = createButton('Render GIF');
+      outButton.position(0, 80);
+      outButton.mousePressed(() => {
+        calcStart();
+        outFrameRate = intoRange(outFrameRateIn.value(), 10, 30);
+        outTickRate = intoRange(outTickRateIn.value(), 1, 80);
+        outStartingTick = intoRange(
+          outStartingTickIn.value(),
+          1,
+          totalGameTicks
+        );
+        outEndingTick = intoRange(
+          outEndingTickIn.value(),
+          outStartingTick,
+          totalGameTicks
+        );
+        outFrameDelay = 1000 / outFrameRate;
+        outTickDelay = 1000 / outTickRate;
+        outFrameRateIn.remove();
+        outTickRateIn.remove();
+        outStartingTickIn.remove();
+        outEndingTickIn.remove();
+        outButton.remove();
+        gameTick = outStartingTick - 1;
+        outputting = true;
+        outMS = 0;
+        lastGameTickMS = 0;
+        frameRate(outFrameRate);
+        outputG = createGraphics(wind.width / 2, wind.height / 2);
+        outputG.drawingContext.imageSmoothingEnabled = false;
+        output = p5Gif.capture({
+          repeat: true,
+          framerate: outFrameRate,
+          width: wind.width / 2,
+          height: wind.height / 2
+        });
+        output.settings.context = outputG.drawingContext;
+      });
+    }
   }
 }
 
@@ -1070,20 +1216,22 @@ function mouseReleased() {
 
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
-  setWind('timeline');
-  wind.resize(width, timelineHeight);
-  wind.y = height - timelineHeight;
-  limitTimeline();
-  setWind('editor');
-  wind.resize(
-    min(windowWidth, editorWidth * 32),
-    min(windowHeight - timelineHeight - 50, editorHeight * 32)
-  );
-  wind.c.drawingContext.imageSmoothingEnabled = false;
-  wind.x = (width - wind.width) * 0.5;
-  wind.y = (height - wind.height - timelineHeight - 50) * 0.5;
-  wind.limiter.limitScale();
-  wind.limiter.limitEdges();
+  if (!handlingOutput) {
+    setWind('timeline');
+    wind.resize(width, timelineHeight);
+    wind.y = height - timelineHeight;
+    limitTimeline();
+    setWind('editor');
+    wind.resize(
+      min(windowWidth, editorWidth * 32),
+      min(windowHeight - timelineHeight - 50, editorHeight * 32)
+    );
+    wind.c.drawingContext.imageSmoothingEnabled = false;
+    wind.x = (width - wind.width) * 0.5;
+    wind.y = (height - wind.height - timelineHeight - 50) * 0.5;
+    wind.limiter.limitScale();
+    wind.limiter.limitEdges();
+  }
 }
 
 function inGridRange(x, y) {
@@ -1102,3 +1250,11 @@ Array.prototype.clone = function () {
   }
   return newArr;
 };
+
+function intoRange(val, min, max) {
+  return val < min ? min : val > max ? max : val;
+}
+
+function outputGif() {
+  output.download('output.gif');
+}
