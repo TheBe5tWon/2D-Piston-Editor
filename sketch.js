@@ -872,10 +872,15 @@ function keyPressed() {
     } else if (outputting == false) {
       handlingOutput = false;
       outFrameRateIn.remove();
+      outFrameRateIn = null;
       outTickRateIn.remove();
+      outTickRateIn = null;
       outStartingTickIn.remove();
+      outStartingTickIn = null;
       outEndingTickIn.remove();
+      outEndingTickIn = null;
       outButton.remove();
+      outButton = null;
     }
   }
 }
