@@ -865,7 +865,7 @@ function keyPressed() {
           repeat: true,
           framerate: outFrameRate,
           width: wind.width / 2,
-          height: wind.height / 2
+          height: wind.height / 2,
         });
         output.settings.context = outputG.drawingContext;
       });
@@ -874,7 +874,7 @@ function keyPressed() {
       outFrameRateIn.remove();
       outTickRateIn.remove();
       outStartingTickIn.remove();
-      outEndingTickIn.remvoe();
+      outEndingTickIn.remove();
       outButton.remove();
     }
   }
