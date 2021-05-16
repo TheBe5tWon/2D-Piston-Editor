@@ -11,7 +11,6 @@ class Piston {
     this.extending = false;
     this.retracting = false;
     this.g = createGraphics(64, 64);
-    this.ctx = this.g.drawingContext;
     this.movable = true;
   }
 
@@ -71,24 +70,20 @@ class Piston {
     }
     switch (this.r) {
       case 0:
-        this.ctx.drawImage(pistonImages[8], 0, 32 - toNextBlock);
-        this.ctx.drawImage(pistonImages[this.sticky ? 4 : 0], 0, 32);
-        c.image(this.g, x, y - 32);
+        c.image(pistonImages[this.sticky ? 4 : 0], x, y);
+        c.image(pistonImages[8], x, y - toNextBlock, 32, 8 + toNextBlock, 0, 0, 32, 8 + toNextBlock);
         break;
       case 1:
-        this.ctx.drawImage(pistonImages[9], -8 + toNextBlock, 0);
-        this.ctx.drawImage(pistonImages[this.sticky ? 5 : 1], 0, 0);
-        c.image(this.g, x, y);
+        c.image(pistonImages[this.sticky ? 5 : 1], x, y);
+        c.image(pistonImages[9], x + 24, y, 8 + toNextBlock, 32, 32 - toNextBlock, 0, 8 + toNextBlock, 32);
         break;
       case 2:
-        this.ctx.drawImage(pistonImages[10], 0, -8 + toNextBlock);
-        this.ctx.drawImage(pistonImages[this.sticky ? 6 : 2], 0, 0);
-        c.image(this.g, x, y);
+        c.image(pistonImages[this.sticky ? 6 : 2], x, y);
+        c.image(pistonImages[10], x, y + 24, 32, 8 + toNextBlock, 0, 32 - toNextBlock, 32, 8 + toNextBlock);
         break;
       case 3:
-        this.ctx.drawImage(pistonImages[11], 32 - toNextBlock, 0);
-        this.ctx.drawImage(pistonImages[this.sticky ? 7 : 3], 32, 0);
-        c.image(this.g, x - 32, y);
+        c.image(pistonImages[this.sticky ? 7 : 3], x, y);
+        c.image(pistonImages[11], x - toNextBlock, y, 8 + toNextBlock, 32, 0, 0, 8 + toNextBlock, 32);
         break;
     }
   }
@@ -187,7 +182,7 @@ class Piston {
               blocks[x][y].moving = false;
               blocks[x][y].movable = true;
             }
-          } else {
+          } else if (blocks[x][y].moveR == this.r) {
             blocks[this.p.x + dir[0]][this.p.y + dir[1]].movable = true;
             blocks[x][y].moving = false;
             blocks[x][y].movable = true;

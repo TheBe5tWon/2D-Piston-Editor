@@ -109,7 +109,7 @@ class Window {
   resize(w, h) {
     this.width = w;
     this.height = h;
-    this.c = createGraphics(w, h);
+    this.c.resizeCanvas(w, h);
   }
 
   getPosVector(x, y) {

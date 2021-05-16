@@ -33,13 +33,10 @@ class Block {
 class Solid {
   constructor(p) {
     this.p = p;
-    this.g = createGraphics(32, 32);
-    this.ctx = this.g.drawingContext;
     this.movable = true;
   }
 
   show(c, i, forceX = 0, forceY = 0) {
-    this.g.clear();
     c.noStroke();
     c.fill(255);
     let x;
@@ -70,8 +67,7 @@ class Solid {
       x = forceX;
       y = forceY;
     }
-    this.ctx.drawImage(woolImg, 0, 0);
-    c.image(this.g, x, y);
+    c.image(woolImg, x, y);
   }
 
   update() {

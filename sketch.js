@@ -22,7 +22,7 @@ for (let i = 0; i < totalGameTicks; i++) {
 let timelineT = null;
 let gameTick = 0;
 let lastGameTickMS;
-let gameTickDelay = 50;
+let gameTickDelay = 200;
 
 let thirdOf32 = 32 / 3;
 
@@ -67,6 +67,7 @@ let outTickDelay;
 let outMS;
 let output;
 let outputG;
+let out;
 
 let controls = [
   { p1: 'Space', s: 'Stop Animation', b: () => timelineT != null },
@@ -76,6 +77,27 @@ let controls = [
   { p1: 'click1', s: 'Place block', b: () => slot != 0 },
   { p1: 'click1', s: 'Select a block', b: () => slot == 0 },
   {
+    p1: 'Shift',
+    p1s: '+',
+    p2: 'click1',
+    s: 'Select multiple blocks',
+    b: () => slot == 0,
+  },
+  {
+    p1: 'Shift',
+    p1s: '+',
+    p2: 'click1',
+    p3: 'drag',
+    s: 'Select area',
+    b: () => slot == 0,
+  },
+  {
+    p1: 'click1',
+    p2: 'drag',
+    s: 'Move selected blocks',
+    b: () => selected.length > 0,
+  },
+  {
     p1: 'leftArrow',
     p2: 'rightArrow',
     p2s: 'or',
@@ -83,30 +105,30 @@ let controls = [
     s: 'Rotate',
     b: () => slot != 0 || selected.length > 0,
   },
+  {
+    p1: 'Delete',
+    p1s: 'or',
+    p2: 'Backspace',
+    s: 'Delete selected blocks',
+    b: () => selected.length > 0,
+  },
   { p1: 'Q', s: 'Edit blocks', b: () => slot != 0 },
 ];
 
 let extensionF = (b) => b.extend();
 let retractionF = (b) => b.retract();
 
-let loaded = 0;
-let loadF = () => {
-  loaded++;
-};
 function preload() {
   for (let i = 0; i < 12; i++) {
-    pistonImages[i] = new Image();
-    pistonImages[i].onload = loadF;
-    pistonImages[i].src = `Blocks/Piston/piston${
-      i < 4 ? '' : i < 8 ? '_sticky' : '_head'
-    }${i % 4}.png`;
+    pistonImages[i] = loadImage(
+      `Blocks/Piston/piston${i < 4 ? '' : i < 8 ? '_sticky' : '_head'}${
+        i % 4
+      }.png`
+    );
   }
-  woolImg = new Image();
-  woolImg.onload = loadF;
-  woolImg.src = `Blocks/SolidBlocks/wool.png`;
-  click1Img = new Image();
-  click1Img.onload = loadF;
-  click1Img.src = `Icons/mouse1.png`;
+  woolImg = loadImage(`Blocks/SolidBlocks/wool.png`);
+  click1Img = loadImage(`Icons/mouse1.png`);
+  dragImg = loadImage(`Icons/arrow.png`);
 }
 
 function setup() {
@@ -150,7 +172,7 @@ function draw() {
     background(180);
     if (outputting) {
       while (round(gameTick * outTickDelay, 5) <= round(outMS, 5)) {
-        if (gameTick == outEndingTick) {
+        if (gameTick + 1 == outEndingTick) {
           outputGif();
           stopTimeline();
           handlingOutput = false;
@@ -353,61 +375,10 @@ function draw() {
     noStroke();
     fill(0);
     let y = 20;
+    let defW = 35;
     for (let i = 0; i < (timelineT == null ? controls.length : 1); i++) {
-      if (controls[i].b) {
-        if (!controls[i].b()) continue;
-      }
-      let defW = 35;
-      let x = 5;
-      let midY = y + defW * 0.5;
-      for (let j = 1; controls[i][`p${j}`]; j++) {
-        let p = `p${j}`;
-        if (controls[i][p]) {
-          let tW = textWidth(controls[i][p]);
-          setKeyText();
-          switch (controls[i][p]) {
-            case 'click1':
-              drawingContext.drawImage(click1Img, x, y, defW, defW);
-              x += defW + 5;
-              break;
-            case 'leftArrow':
-              controlBox(x, y, defW, defW);
-              beginShape();
-              vertex(x + 25, midY - 10);
-              vertex(x + 10, midY);
-              vertex(x + 25, midY + 10);
-              endShape();
-              x += defW + 5;
-              break;
-            case 'rightArrow':
-              controlBox(x, y, defW, defW);
-              beginShape();
-              vertex(x + 10, midY - 10);
-              vertex(x + 25, midY);
-              vertex(x + 10, midY + 10);
-              endShape();
-              x += defW + 5;
-              break;
-            default:
-              let tW = textWidth(controls[i][p]);
-              w = max(defW, tW + 20);
-              controlBox(x, y, w, defW);
-              setKeyText();
-              text(controls[i][p], x + w * 0.5, midY);
-              x += w + 5;
-              break;
-          }
-          let pS = p + 's';
-          if (controls[i][pS]) {
-            let tW = textWidth(controls[i][pS]);
-            text(controls[i][pS], x + tW * 0.5, midY);
-            x += tW + 5;
-          }
-        }
-      }
-      setStringText();
-      text(controls[i].s, x, midY);
-      y += defW + 5;
+      drawControl(controls[i], 5, y, defW);
+      if (!controls[i].b || controls[i].b()) y += defW + 5;
     }
     noStroke();
     fill(0);
@@ -415,6 +386,63 @@ function draw() {
     textSize(12);
     text(round(frameRate()), 0, 0);
   }
+}
+
+function drawControl(c, x, y, dW) {
+  if (c.b && !c.b()) return;
+  let defW = dW;
+  let midY = y + defW * 0.5;
+  for (let j = 1; c[`p${j}`]; j++) {
+    let p = `p${j}`;
+    if (c[p]) {
+      let tW = textWidth(c[p]);
+      setKeyText();
+      switch (c[p]) {
+        case 'click1':
+          image(click1Img, x, y, defW, defW);
+          x += defW + 5;
+          break;
+        case 'leftArrow':
+          controlBox(x, y, defW, defW);
+          beginShape();
+          vertex(x + 25, midY - 10);
+          vertex(x + 10, midY);
+          vertex(x + 25, midY + 10);
+          endShape();
+          x += defW + 5;
+          break;
+        case 'rightArrow':
+          controlBox(x, y, defW, defW);
+          beginShape();
+          vertex(x + 10, midY - 10);
+          vertex(x + 25, midY);
+          vertex(x + 10, midY + 10);
+          endShape();
+          x += defW + 5;
+          break;
+        case 'drag':
+          image(dragImg, x - defW * 0.4, y, defW, defW);
+          x += defW + 5 - defW * 0.6;
+          break;
+        default:
+          let tW = textWidth(c[p]);
+          w = max(defW, tW + 20);
+          controlBox(x, y, w, defW);
+          setKeyText();
+          text(c[p], x + w * 0.5, midY);
+          x += w + 5;
+          break;
+      }
+      let pS = p + 's';
+      if (c[pS]) {
+        let tW = textWidth(c[pS]);
+        text(c[pS], x + tW * 0.5, midY);
+        x += tW + 5;
+      }
+    }
+  }
+  setStringText();
+  text(c.s, x, midY);
 }
 
 function controlBox(x, y, w, h) {
@@ -773,7 +801,7 @@ function keyPressed() {
     }
     if (!keyIsDown(CONTROL)) {
       for (let ob of selected) {
-        ob.b.g.remove();
+        if (ob.b.g) ob.b.g.remove();
       }
       selected = [];
     }
@@ -836,7 +864,10 @@ function keyPressed() {
       outButton.position(0, 80);
       outButton.mousePressed(() => {
         calcStart();
-        outFrameRate = intoRange(outFrameRateIn.value(), 10, 30);
+        outFrameRate = intoRange(parseInt(outFrameRateIn.value()), 10, 30);
+        outFrameDelay = 10 * round(100 / outFrameRate);
+        outFrameRate = 1000 / outFrameDelay;
+        frameRate(outFrameRate);
         outTickRate = intoRange(outTickRateIn.value(), 1, 80);
         outStartingTick = intoRange(
           outStartingTickIn.value(),
@@ -848,7 +879,6 @@ function keyPressed() {
           outStartingTick,
           totalGameTicks
         );
-        outFrameDelay = 1000 / outFrameRate;
         outTickDelay = 1000 / outTickRate;
         outFrameRateIn.remove();
         outTickRateIn.remove();
@@ -859,7 +889,6 @@ function keyPressed() {
         outputting = true;
         outMS = 0;
         lastGameTickMS = 0;
-        frameRate(outFrameRate);
         outputG = createGraphics(wind.width / 2, wind.height / 2);
         outputG.drawingContext.imageSmoothingEnabled = false;
         output = p5Gif.capture({
@@ -1166,7 +1195,6 @@ function mouseReleased() {
               timelineSelected[0].ind2 == 1 ||
               timeline[ind[0]][ind[1]][ind1][1] != undefined
             ) {
-              console.log('nope');
               break label;
             }
             if (ind[2] > ind1) {
@@ -1269,5 +1297,19 @@ function intoRange(val, min, max) {
 }
 
 function outputGif() {
-  output.download('output.gif');
+  out = createImage(output.settings.width, output.settings.height);
+  out.modified = true;
+  out._modified = true;
+  out.gifProperties = {
+    loopLimit: null,
+    frames: [],
+    numFrames: output.frames.length,
+  }
+  for (let i = 0; i < output.frames.length; i++) {
+    out.gifProperties.frames[i] = {
+      delay: outFrameDelay * 1.225,
+      image: new ImageData(output.frames[i], output.settings.width, output.settings.height),
+    }
+  }
+  saveGif(out, 'output.gif');
 }
