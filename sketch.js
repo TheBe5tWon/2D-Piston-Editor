@@ -22,7 +22,7 @@ for (let i = 0; i < totalGameTicks; i++) {
 let timelineT = null;
 let gameTick = 0;
 let lastGameTickMS;
-let gameTickDelay = 200;
+let gameTickDelay = 50;
 
 let thirdOf32 = 32 / 3;
 
@@ -68,6 +68,10 @@ let outMS;
 let output;
 let outputG;
 let out;
+
+let saveButton;
+let loadButton;
+let saveNameIn;
 
 let controls = [
   { p1: 'Space', s: 'Stop Animation', b: () => timelineT != null },
@@ -133,14 +137,15 @@ function preload() {
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
+  makeSaveLoadButtons();
   invArr = new Array(3);
   invArr[0] = {
     s: new Piston(null, 0, false),
-    f: (x, y) => blocks[x][y].newPiston(defaultRotation, false),
+    f: (x, y, r = defaultRotation) => blocks[x][y].newPiston(r, false),
   };
   invArr[1] = {
     s: new Piston(null, 0, true),
-    f: (x, y) => blocks[x][y].newPiston(defaultRotation, true),
+    f: (x, y, r = defaultRotation) => blocks[x][y].newPiston(r, true),
   };
   invArr[2] = { s: new Solid(null), f: (x, y) => blocks[x][y].newSolidBlock() };
   slotArr = new Array(9);
@@ -180,6 +185,7 @@ function draw() {
           editing = true;
           windowResized();
           frameRate(144);
+          makeSaveLoadButtons();
           return;
         }
         timelineHandler();
@@ -374,7 +380,7 @@ function draw() {
     }
     noStroke();
     fill(0);
-    let y = 20;
+    let y = 60;
     let defW = 35;
     for (let i = 0; i < (timelineT == null ? controls.length : 1); i++) {
       drawControl(controls[i], 5, y, defW);
@@ -786,8 +792,10 @@ function keyPressed() {
       dragSelect = false;
       startTimeline();
       editing = false;
+      deleteSaveLoadButtons();
     } else {
       stopTimeline();
+      makeSaveLoadButtons();
     }
   } else if (keyCode == 71) {
     if (editing) grid = !grid;
@@ -899,7 +907,9 @@ function keyPressed() {
         });
         output.settings.context = outputG.drawingContext;
       });
+      deleteSaveLoadButtons();
     } else if (outputting == false) {
+      editing = true;
       handlingOutput = false;
       outFrameRateIn.remove();
       outFrameRateIn = null;
@@ -911,6 +921,7 @@ function keyPressed() {
       outEndingTickIn = null;
       outButton.remove();
       outButton = null;
+      makeSaveLoadButtons();
     }
   }
 }
@@ -1304,12 +1315,149 @@ function outputGif() {
     loopLimit: null,
     frames: [],
     numFrames: output.frames.length,
-  }
+  };
   for (let i = 0; i < output.frames.length; i++) {
     out.gifProperties.frames[i] = {
-      delay: outFrameDelay * 1.225,
-      image: new ImageData(output.frames[i], output.settings.width, output.settings.height),
-    }
+      delay: outFrameDelay,
+      image: new ImageData(
+        output.frames[i],
+        output.settings.width,
+        output.settings.height
+      ),
+    };
   }
   saveGif(out, 'output.gif');
+}
+
+function makeSaveLoadButtons() {
+  saveNameIn = createInput('name');
+  saveNameIn.position(50, 12);
+  saveButton = createButton('Save');
+  saveButton.position(2, 12);
+  saveButton.mousePressed(() => {
+    saveEditor(saveNameIn.value());
+  });
+  loadButton = createFileInput((file) => {
+    loadEditor(file);
+  }, false);
+  loadButton.position(2, 34);
+}
+
+function deleteSaveLoadButtons() {
+  saveNameIn.remove();
+  saveButton.remove();
+  loadButton.remove();
+}
+
+function saveEditor(name) {
+  let txt = [];
+  txt.push(`${editorWidth} ${editorHeight} ${totalGameTicks}`);
+  for (let y = 0; y < editorHeight; y++) {
+    for (let x = 0; x < editorWidth; x++) {
+      let block = blocks[x][y].block;
+      if (block != null)
+        txt.push(
+          `B${block.id} x${x} y${y}` +
+            (block.r != undefined ? ` r${block.r}` : '')
+        );
+      for (let i = 0; i < timeline.length; i++) {
+        for (let j = 0; j < timeline[i].length; j++) {
+          for (let k = 0; k < timeline[i][j].length; k++) {
+            for (let l = 0; l < timeline[i][j][k].length; l++) {
+              if (timeline[i][j][k][l] && timeline[i][j][k][l].b == block) {
+                txt.push(`T ${i} ${j} ${k} ${l} ${timeline[i][j][k][l].t}`);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  save(txt, `${name}.txt`);
+}
+
+function loadEditor(file) {
+  let strArr = file.data.split('\n');
+  let editorSettings = strArr[0].split(' ');
+  for (let i = 0; i < 3; i++) {
+    editorSettings[i] = parseInt(editorSettings[i]);
+  }
+  editorWidth = editorSettings[0];
+  editorHeight = editorSettings[1];
+  totalGameTicks = editorSettings[2];
+  console.log(editorSettings);
+  blocks = [];
+  selected = [];
+  editing = true;
+  for (let i = 0; i < editorWidth; i++) {
+    blocks[i] = [];
+    for (let j = 0; j < editorHeight; j++) {
+      blocks[i][j] = new Block(i, j);
+    }
+  }
+  timeline = [];
+  collapsed = [];
+  timelineClickB = false;
+  moveTimelineB = false;
+  timelineMoveStartInd;
+  timelineSelectInd = new Array(2);
+  timelineSelected = [];
+  startingTimeline = null;
+  for (let i = 0; i < totalGameTicks; i++) {
+    timeline[i] = [[]];
+    collapsed[i] = [];
+  }
+  timelineT = null;
+  gameTick = 0;
+  let curBlock;
+  for (let i = 1; i < strArr.length; i++) {
+    let str = strArr[i];
+    if (str[0] == 'B') {
+      let ind = parseInt(str.slice(1, 4), 16);
+      let xInd = str.indexOf('x');
+      let x = parseInt(str.slice(xInd + 1, str.indexOf(' ', xInd)));
+      let yInd = str.indexOf('y');
+      let y;
+      let rInd = str.indexOf('r');
+      let r = null;
+      if (rInd != -1) {
+        r = parseInt(str.slice(rInd + 1));
+        y = parseInt(str.slice(yInd + 1, str.indexOf(' ', yInd)));
+      } else {
+        y = parseInt(str.slice(yInd + 1));
+      }
+      // console.log(ind, x, y, r);
+      invArr[ind].f(x, y, r);
+      curBlock = blocks[x][y].block;
+    } else if (str[0] == 'T') {
+      let spaceInd = 1;
+      let indexArr = [];
+      for (let i = 0; i < 4; i++) {
+        let nextSpaceInd = str.indexOf(' ', spaceInd + 1);
+        indexArr.push(parseInt(str.slice(spaceInd, nextSpaceInd)));
+        spaceInd = nextSpaceInd;
+      }
+      let id = str.slice(spaceInd + 1);
+      let func;
+      switch (id) {
+        case 'piston extend':
+          func = extensionF;
+          break;
+        case 'piston retract':
+          func = retractionF;
+          break;
+      }
+      while (timeline[indexArr[0]].length <= indexArr[1]) {
+        timeline[indexArr[0]].push([]);
+      }
+      while (timeline[indexArr[0]][indexArr[1]].length <= indexArr[2]) {
+        timeline[indexArr[0]][indexArr[1]].push(new Array(2));
+      }
+      timeline[indexArr[0]][indexArr[1]][indexArr[2]][indexArr[3]] = {
+        b: curBlock,
+        f: func,
+        t: id,
+      };
+    }
+  }
 }

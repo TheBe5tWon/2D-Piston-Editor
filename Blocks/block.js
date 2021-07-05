@@ -34,6 +34,7 @@ class Solid {
   constructor(p) {
     this.p = p;
     this.movable = true;
+    this.id = "002";
   }
 
   show(c, i, forceX = 0, forceY = 0) {
