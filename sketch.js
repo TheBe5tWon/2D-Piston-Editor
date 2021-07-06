@@ -261,10 +261,10 @@ function draw() {
     if (editing && grid) {
       wind.c.stroke(0);
       for (let x = 1; x < editorWidth; x++) {
-        wind.c.line(x * 32, 0, x * 32, 32 * editorWidth);
+        wind.c.line(x * 32, 0, x * 32, 32 * editorHeight);
       }
       for (let y = 1; y < editorHeight; y++) {
-        wind.c.line(0, y * 32, 32 * editorHeight, y * 32);
+        wind.c.line(0, y * 32, 32 * editorWidth, y * 32);
       }
     }
     if (dragSelect && editing && !clickB) {
@@ -595,6 +595,7 @@ function stopTimeline() {
   startingTimeline = null;
   startingBlocks = null;
   gameTick = 0;
+  makeSaveLoadButtons();
 }
 
 function getTimelineSpot() {
@@ -776,152 +777,154 @@ function mergeTimelineEnds(ind1, ind2) {
 }
 
 function keyPressed() {
-  for (let i = 1; i <= 9; i++) {
-    if (key == i.toString()) {
-      if (slot == 0) putDownSelected();
-      slot = i;
-    }
-  }
-  if (keyCode == 32) {
-    if (timelineT == null) {
-      putDownSelected();
-      calcStart();
-      clickB = false;
-      wind.allowDrag = true;
-      moveSelected = false;
-      dragSelect = false;
-      startTimeline();
-      editing = false;
-      deleteSaveLoadButtons();
-    } else {
-      stopTimeline();
-      makeSaveLoadButtons();
-    }
-  } else if (keyCode == 71) {
-    if (editing) grid = !grid;
-  } else if (keyCode == BACKSPACE || keyCode == DELETE) {
-    if (selected.length > 0) {
-      for (let block of selected) {
-        deleteFromTimeline(block.b);
-      }
-    } else if (timelineSelected.length > 0) {
-      deleteTimelineSelected();
-    }
-    if (!keyIsDown(CONTROL)) {
-      for (let ob of selected) {
-        if (ob.b.g) ob.b.g.remove();
-      }
-      selected = [];
-    }
-  } else if (keyCode == LEFT_ARROW) {
-    if (editing) {
-      if (slot != 0) {
-        defaultRotation = (defaultRotation + 3) % 4;
-      } else {
-        rotateSelected(false);
+  if (!saveNameIn || document.activeElement.tagName != "INPUT") {
+    for (let i = 1; i <= 9; i++) {
+      if (key == i.toString()) {
+        if (slot == 0) putDownSelected();
+        slot = i;
       }
     }
-  } else if (keyCode == RIGHT_ARROW || keyCode == 82) {
-    if (editing) {
-      if (slot != 0) {
-        defaultRotation = (defaultRotation + 1) % 4;
-      } else {
-        rotateSelected(true);
-      }
-    }
-  } else if (keyCode == 67) {
-    if (editing && slot == 0) putDownSelected(false);
-  } else if (keyCode == 81) {
-    slot = 0;
-  } else if (keyCode == 79) {
-    if (handlingOutput == false) {
-      putDownSelected();
-      handlingOutput = true;
-      editing = false;
-      if (timelineT != null) stopTimeline();
-      textSize(16);
-      outFrameRateIn = createInput(24, 'number');
-      outFrameRateIn.position(textWidth('Frame Rate:') + 10, 0);
-      outFrameRateIn.size(50);
-      outFrameRateIn.id('frameRate');
-      let element = document.getElementById('frameRate');
-      element.min = 10;
-      element.max = 30;
-      outTickRateIn = createInput(20, 'number');
-      outTickRateIn.position(textWidth('Tick Rate:') + 10, 20);
-      outTickRateIn.size(50);
-      outTickRateIn.id('tickRate');
-      element = document.getElementById('tickRate');
-      element.min = 1;
-      element.max = 80;
-      outStartingTickIn = createInput(1, 'number');
-      outStartingTickIn.position(textWidth('Starting Gametick:') + 10, 40);
-      outStartingTickIn.size(50);
-      outStartingTickIn.id('startTick');
-      element = document.getElementById('startTick');
-      element.min = 1;
-      element.max = totalGameTicks;
-      outEndingTickIn = createInput(totalGameTicks, 'number');
-      outEndingTickIn.position(textWidth('Ending Gametick:') + 10, 60);
-      outEndingTickIn.size(50);
-      outEndingTickIn.id('endTick');
-      element = document.getElementById('endTick');
-      element.min = 1;
-      element.max = totalGameTicks;
-      outButton = createButton('Render GIF');
-      outButton.position(0, 80);
-      outButton.mousePressed(() => {
+    if (keyCode == 32) {
+      if (timelineT == null) {
+        putDownSelected();
         calcStart();
-        outFrameRate = intoRange(parseInt(outFrameRateIn.value()), 10, 30);
-        outFrameDelay = 10 * round(100 / outFrameRate);
-        outFrameRate = 1000 / outFrameDelay;
-        frameRate(outFrameRate);
-        outTickRate = intoRange(outTickRateIn.value(), 1, 80);
-        outStartingTick = intoRange(
-          outStartingTickIn.value(),
-          1,
-          totalGameTicks
-        );
-        outEndingTick = intoRange(
-          outEndingTickIn.value(),
-          outStartingTick,
-          totalGameTicks
-        );
-        outTickDelay = 1000 / outTickRate;
-        outFrameRateIn.remove();
-        outTickRateIn.remove();
-        outStartingTickIn.remove();
-        outEndingTickIn.remove();
-        outButton.remove();
-        gameTick = outStartingTick - 1;
-        outputting = true;
-        outMS = 0;
-        lastGameTickMS = 0;
-        outputG = createGraphics(wind.width / 2, wind.height / 2);
-        outputG.drawingContext.imageSmoothingEnabled = false;
-        output = p5Gif.capture({
-          repeat: true,
-          framerate: outFrameRate,
-          width: wind.width / 2,
-          height: wind.height / 2,
+        clickB = false;
+        wind.allowDrag = true;
+        moveSelected = false;
+        dragSelect = false;
+        startTimeline();
+        editing = false;
+        deleteSaveLoadButtons();
+      } else {
+        stopTimeline();
+        makeSaveLoadButtons();
+      }
+    } else if (keyCode == 71) {
+      if (editing) grid = !grid;
+    } else if (keyCode == BACKSPACE || keyCode == DELETE) {
+      if (selected.length > 0) {
+        for (let block of selected) {
+          deleteFromTimeline(block.b);
+        }
+      } else if (timelineSelected.length > 0) {
+        deleteTimelineSelected();
+      }
+      if (!keyIsDown(CONTROL)) {
+        for (let ob of selected) {
+          if (ob.b.g) ob.b.g.remove();
+        }
+        selected = [];
+      }
+    } else if (keyCode == LEFT_ARROW) {
+      if (editing) {
+        if (slot != 0) {
+          defaultRotation = (defaultRotation + 3) % 4;
+        } else {
+          rotateSelected(false);
+        }
+      }
+    } else if (keyCode == RIGHT_ARROW || keyCode == 82) {
+      if (editing) {
+        if (slot != 0) {
+          defaultRotation = (defaultRotation + 1) % 4;
+        } else {
+          rotateSelected(true);
+        }
+      }
+    } else if (keyCode == 67) {
+      if (editing && slot == 0) putDownSelected(false);
+    } else if (keyCode == 81) {
+      slot = 0;
+    } else if (keyCode == 79) {
+      if (handlingOutput == false) {
+        putDownSelected();
+        handlingOutput = true;
+        editing = false;
+        if (timelineT != null) stopTimeline();
+        textSize(16);
+        outFrameRateIn = createInput(24, 'number');
+        outFrameRateIn.position(textWidth('Frame Rate:') + 10, 0);
+        outFrameRateIn.size(50);
+        outFrameRateIn.id('frameRate');
+        let element = document.getElementById('frameRate');
+        element.min = 10;
+        element.max = 30;
+        outTickRateIn = createInput(20, 'number');
+        outTickRateIn.position(textWidth('Tick Rate:') + 10, 20);
+        outTickRateIn.size(50);
+        outTickRateIn.id('tickRate');
+        element = document.getElementById('tickRate');
+        element.min = 1;
+        element.max = 80;
+        outStartingTickIn = createInput(1, 'number');
+        outStartingTickIn.position(textWidth('Starting Gametick:') + 10, 40);
+        outStartingTickIn.size(50);
+        outStartingTickIn.id('startTick');
+        element = document.getElementById('startTick');
+        element.min = 1;
+        element.max = totalGameTicks;
+        outEndingTickIn = createInput(totalGameTicks, 'number');
+        outEndingTickIn.position(textWidth('Ending Gametick:') + 10, 60);
+        outEndingTickIn.size(50);
+        outEndingTickIn.id('endTick');
+        element = document.getElementById('endTick');
+        element.min = 1;
+        element.max = totalGameTicks;
+        outButton = createButton('Render GIF');
+        outButton.position(0, 80);
+        outButton.mousePressed(() => {
+          calcStart();
+          outFrameRate = intoRange(parseInt(outFrameRateIn.value()), 10, 30);
+          outFrameDelay = 10 * round(100 / outFrameRate);
+          outFrameRate = 1000 / outFrameDelay;
+          frameRate(outFrameRate);
+          outTickRate = intoRange(outTickRateIn.value(), 1, 80);
+          outStartingTick = intoRange(
+            outStartingTickIn.value(),
+            1,
+            totalGameTicks
+          );
+          outEndingTick = intoRange(
+            outEndingTickIn.value(),
+            outStartingTick,
+            totalGameTicks
+          );
+          outTickDelay = 1000 / outTickRate;
+          outFrameRateIn.remove();
+          outTickRateIn.remove();
+          outStartingTickIn.remove();
+          outEndingTickIn.remove();
+          outButton.remove();
+          gameTick = outStartingTick - 1;
+          outputting = true;
+          outMS = 0;
+          lastGameTickMS = 0;
+          outputG = createGraphics(wind.width / 2, wind.height / 2);
+          outputG.drawingContext.imageSmoothingEnabled = false;
+          output = p5Gif.capture({
+            repeat: true,
+            framerate: outFrameRate,
+            width: wind.width / 2,
+            height: wind.height / 2,
+          });
+          output.settings.context = outputG.drawingContext;
         });
-        output.settings.context = outputG.drawingContext;
-      });
-      deleteSaveLoadButtons();
-    } else if (outputting == false) {
-      editing = true;
-      handlingOutput = false;
-      outFrameRateIn.remove();
-      outFrameRateIn = null;
-      outTickRateIn.remove();
-      outTickRateIn = null;
-      outStartingTickIn.remove();
-      outStartingTickIn = null;
-      outEndingTickIn.remove();
-      outEndingTickIn = null;
-      outButton.remove();
-      outButton = null;
-      makeSaveLoadButtons();
+        deleteSaveLoadButtons();
+      } else if (outputting == false) {
+        editing = true;
+        handlingOutput = false;
+        outFrameRateIn.remove();
+        outFrameRateIn = null;
+        outTickRateIn.remove();
+        outTickRateIn = null;
+        outStartingTickIn.remove();
+        outStartingTickIn = null;
+        outEndingTickIn.remove();
+        outEndingTickIn = null;
+        outButton.remove();
+        outButton = null;
+        makeSaveLoadButtons();
+      }
     }
   }
 }
@@ -1278,6 +1281,7 @@ function windowResized() {
       min(windowWidth, editorWidth * 32),
       min(windowHeight - timelineHeight - 50, editorHeight * 32)
     );
+    wind.setLimits(0, 0, editorWidth * 32, editorHeight * 32);
     wind.c.drawingContext.imageSmoothingEnabled = false;
     wind.x = (width - wind.width) * 0.5;
     wind.y = (height - wind.height - timelineHeight - 50) * 0.5;
@@ -1460,4 +1464,5 @@ function loadEditor(file) {
       };
     }
   }
+  windowResized();
 }
