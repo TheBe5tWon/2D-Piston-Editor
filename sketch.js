@@ -185,7 +185,6 @@ function draw() {
           editing = true;
           windowResized();
           frameRate(144);
-          makeSaveLoadButtons();
           return;
         }
         timelineHandler();
@@ -797,7 +796,6 @@ function keyPressed() {
         deleteSaveLoadButtons();
       } else {
         stopTimeline();
-        makeSaveLoadButtons();
       }
     } else if (keyCode == 71) {
       if (editing) grid = !grid;
