@@ -1454,6 +1454,9 @@ function loadEditor(file) {
       while (timeline[indexArr[0]].length <= indexArr[1]) {
         timeline[indexArr[0]].push([]);
       }
+      while (collapsed[indexArr[0]].length <= indexArr[1]) {
+        collapsed[indexArr[0]].push(false);
+      }
       while (timeline[indexArr[0]][indexArr[1]].length <= indexArr[2]) {
         timeline[indexArr[0]][indexArr[1]].push(new Array(2));
       }
