@@ -878,12 +878,12 @@ function keyPressed() {
           frameRate(outFrameRate);
           outTickRate = intoRange(outTickRateIn.value(), 1, 80);
           outStartingTick = intoRange(
-            outStartingTickIn.value(),
+            parseInt(outStartingTickIn.value()),
             1,
             totalGameTicks
           );
           outEndingTick = intoRange(
-            outEndingTickIn.value(),
+            parseInt(outEndingTickIn.value()),
             outStartingTick,
             totalGameTicks
           );
@@ -893,9 +893,9 @@ function keyPressed() {
           outStartingTickIn.remove();
           outEndingTickIn.remove();
           outButton.remove();
-          gameTick = outStartingTick - 1;
+          // gameTick = outStartingTick - 1; Changed to running timelineHandler instead
           outputting = true;
-          outMS = 0;
+          outMS = (outStartingTick - 1) * outTickDelay;
           lastGameTickMS = 0;
           outputG = createGraphics(wind.width / 2, wind.height / 2);
           outputG.drawingContext.imageSmoothingEnabled = false;
@@ -906,6 +906,11 @@ function keyPressed() {
             height: wind.height / 2,
           });
           output.settings.context = outputG.drawingContext;
+          gameTick = 0;
+          for (let i = 0; i < outStartingTick - 1; i++) {
+            console.log("gameTick", gameTick);
+            timelineHandler();
+          }
         });
         deleteSaveLoadButtons();
       } else if (outputting == false) {
