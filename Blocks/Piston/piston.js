@@ -12,7 +12,7 @@ class Piston {
     this.retracting = false;
     this.g = createGraphics(64, 64);
     this.movable = true;
-    this.id = this.sticky ? "001" : "000";
+    this.id = this.sticky ? '001' : '000';
   }
 
   show(c, i, forceX = 0, forceY = 0) {
@@ -72,19 +72,59 @@ class Piston {
     switch (this.r) {
       case 0:
         c.image(pistonImages[this.sticky ? 4 : 0], x, y);
-        c.image(pistonImages[8], x, y - toNextBlock, 32, 8 + toNextBlock, 0, 0, 32, 8 + toNextBlock);
+        c.image(
+          pistonImages[8],
+          x,
+          y - toNextBlock,
+          32,
+          8 + toNextBlock,
+          0,
+          0,
+          32,
+          8 + toNextBlock
+        );
         break;
       case 1:
         c.image(pistonImages[this.sticky ? 5 : 1], x, y);
-        c.image(pistonImages[9], x + 24, y, 8 + toNextBlock, 32, 32 - toNextBlock, 0, 8 + toNextBlock, 32);
+        c.image(
+          pistonImages[9],
+          x + 24,
+          y,
+          8 + toNextBlock,
+          32,
+          32 - toNextBlock,
+          0,
+          8 + toNextBlock,
+          32
+        );
         break;
       case 2:
         c.image(pistonImages[this.sticky ? 6 : 2], x, y);
-        c.image(pistonImages[10], x, y + 24, 32, 8 + toNextBlock, 0, 32 - toNextBlock, 32, 8 + toNextBlock);
+        c.image(
+          pistonImages[10],
+          x,
+          y + 24,
+          32,
+          8 + toNextBlock,
+          0,
+          32 - toNextBlock,
+          32,
+          8 + toNextBlock
+        );
         break;
       case 3:
         c.image(pistonImages[this.sticky ? 7 : 3], x, y);
-        c.image(pistonImages[11], x - toNextBlock, y, 8 + toNextBlock, 32, 0, 0, 8 + toNextBlock, 32);
+        c.image(
+          pistonImages[11],
+          x - toNextBlock,
+          y,
+          8 + toNextBlock,
+          32,
+          0,
+          0,
+          8 + toNextBlock,
+          32
+        );
         break;
     }
   }
@@ -183,11 +223,15 @@ class Piston {
               blocks[x][y].moving = false;
               blocks[x][y].movable = true;
             }
-          } else if (blocks[x][y].moveR == this.r) {
+          } else {
             blocks[this.p.x + dir[0]][this.p.y + dir[1]].movable = true;
-            blocks[x][y].moving = false;
-            blocks[x][y].movable = true;
+            if (blocks[x][y].moveR == this.r) {
+              blocks[x][y].moving = false;
+              blocks[x][y].movable = true;
+            }
           }
+        } else {
+          blocks[this.p.x + dir[0]][this.p.y + dir[1]].movable = true;
         }
       } else {
         blocks[this.p.x + dir[0]][this.p.y + dir[1]].movable = true;
