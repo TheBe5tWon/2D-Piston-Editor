@@ -7,7 +7,7 @@ let blocks = [];
 for (let i = 0; i < editorWidth; i++) {
   blocks[i] = [];
   for (let j = 0; j < editorHeight; j++) {
-    blocks[i][j] = new Block(i, j);
+    blocks[i][j] = new Block(i, j, true);
   }
 }
 
@@ -130,7 +130,10 @@ function preload() {
       }.png`
     );
   }
-  woolImg = loadImage(`Blocks/SolidBlocks/wool.png`);
+  standardBlockImages[0] = loadImage(`Blocks/StandardBlocks/wool.png`);
+  standardBlockImages[1] = loadImage(`Blocks/StandardBlocks/glass.png`);
+  standardBlockImages[2] = loadImage(`Blocks/StandardBlocks/obsidian.png`);
+  standardBlockImages[3] = loadImage(`Blocks/StandardBlocks/tnt.png`);
   click1Img = loadImage(`Icons/mouse1.png`);
   dragImg = loadImage(`Icons/arrow.png`);
 }
@@ -147,7 +150,10 @@ function setup() {
     s: new Piston(null, 0, true),
     f: (x, y, r = defaultRotation) => blocks[x][y].newPiston(r, true),
   };
-  invArr[2] = { s: new Solid(null), f: (x, y) => blocks[x][y].newSolidBlock() };
+  invArr[2] = { s: new StandardBlock(null, true, "002"), f: (x, y) => blocks[x][y].newStandardBlock(true, "002") };
+  invArr[3] = { s: new StandardBlock(null, true, "003"), f: (x, y) => blocks[x][y].newStandardBlock(true, "003") };
+  invArr[4] = { s: new StandardBlock(null, false, "004"), f: (x, y) => blocks[x][y].newStandardBlock(false, "004") };
+  invArr[5] = { s: new StandardBlock(null, true, "005"), f: (x, y) => blocks[x][y].newStandardBlock(true, "005") };
   slotArr = new Array(9);
   for (let i = 0; i < 9; i++) {
     if (i < invArr.length) slotArr[i] = invArr[i];
@@ -1399,7 +1405,7 @@ function loadEditor(file) {
   for (let i = 0; i < editorWidth; i++) {
     blocks[i] = [];
     for (let j = 0; j < editorHeight; j++) {
-      blocks[i][j] = new Block(i, j);
+      blocks[i][j] = new Block(i, j, true);
     }
   }
   timeline = [];

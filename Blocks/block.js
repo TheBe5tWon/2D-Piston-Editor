@@ -1,15 +1,15 @@
 class Block {
-  constructor(x, y) {
+  constructor(x, y, movable) {
     this.x = x;
     this.y = y;
     this.block = null;
-    this.movable = true;
+    this.movable = movable;
     this.moving = false;
     this.movingTick;
   }
 
-  newSolidBlock() {
-    this.block = new Solid(this);
+  newStandardBlock(movable, id) {
+    this.block = new StandardBlock(this, movable, id);
   }
 
   newPiston(r, s) {
@@ -21,7 +21,7 @@ class Block {
   }
 
   clone() {
-    let newBlock = new Block(this.x, this.y);
+    let newBlock = new Block(this.x, this.y, this.movable);
     for (let p in newBlock) {
       if (p != 'block') newBlock[p] = this[p];
     }
@@ -30,11 +30,15 @@ class Block {
   }
 }
 
-class Solid {
-  constructor(p) {
+let standardBlockImages = [];
+
+class StandardBlock {
+  constructor(p, movable, id) {
     this.p = p;
-    this.movable = true;
-    this.id = "002";
+    if (this.p != null) this.p.movable = movable;
+    this.movable = movable;
+    this.id = id;
+    this.imgInd = parseInt(this.id) - 2;
   }
 
   show(c, i, forceX = 0, forceY = 0) {
@@ -68,7 +72,7 @@ class Solid {
       x = forceX;
       y = forceY;
     }
-    c.image(woolImg, x, y);
+    c.image(standardBlockImages[this.imgInd], x, y);
   }
 
   update() {
@@ -81,6 +85,6 @@ class Solid {
   }
 
   clone(p) {
-    return new Solid(p);
+    return new StandardBlock(p, this.movable, this.id);
   }
 }
