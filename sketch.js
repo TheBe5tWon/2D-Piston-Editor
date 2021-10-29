@@ -117,10 +117,27 @@ let controls = [
     b: () => selected.length > 0,
   },
   { p1: 'Q', s: 'Edit blocks', b: () => slot != 0 },
+  {
+    p1: 'X',
+    s: 'Set Pistons To Extended',
+    b: () => checkSelectedForPistons(),
+  },
+  {
+    p1: 'Z',
+    s: 'Set Pistons To Retracted',
+    b: () => checkSelectedForPistons(),
+  },
 ];
 
 let extensionF = (b) => b.extend();
 let retractionF = (b) => b.retract();
+
+let checkSelectedForPistons = () => {
+  for (let block of selected) {
+    if (block.b instanceof Piston) return true;
+  }
+  return false;
+};
 
 function preload() {
   for (let i = 0; i < 12; i++) {
@@ -144,16 +161,28 @@ function setup() {
   invArr = new Array(3);
   invArr[0] = {
     s: new Piston(null, 0, false),
-    f: (x, y, r = defaultRotation) => blocks[x][y].newPiston(r, false),
+    f: (x, y, r = defaultRotation, e) => blocks[x][y].newPiston(r, false, e),
   };
   invArr[1] = {
     s: new Piston(null, 0, true),
-    f: (x, y, r = defaultRotation) => blocks[x][y].newPiston(r, true),
+    f: (x, y, r = defaultRotation, e) => blocks[x][y].newPiston(r, true, e),
   };
-  invArr[2] = { s: new StandardBlock(null, true, "002"), f: (x, y) => blocks[x][y].newStandardBlock(true, "002") };
-  invArr[3] = { s: new StandardBlock(null, true, "003"), f: (x, y) => blocks[x][y].newStandardBlock(true, "003") };
-  invArr[4] = { s: new StandardBlock(null, false, "004"), f: (x, y) => blocks[x][y].newStandardBlock(false, "004") };
-  invArr[5] = { s: new StandardBlock(null, true, "005"), f: (x, y) => blocks[x][y].newStandardBlock(true, "005") };
+  invArr[2] = {
+    s: new StandardBlock(null, true, '002'),
+    f: (x, y) => blocks[x][y].newStandardBlock(true, '002'),
+  };
+  invArr[3] = {
+    s: new StandardBlock(null, true, '003'),
+    f: (x, y) => blocks[x][y].newStandardBlock(true, '003'),
+  };
+  invArr[4] = {
+    s: new StandardBlock(null, false, '004'),
+    f: (x, y) => blocks[x][y].newStandardBlock(false, '004'),
+  };
+  invArr[5] = {
+    s: new StandardBlock(null, true, '005'),
+    f: (x, y) => blocks[x][y].newStandardBlock(true, '005'),
+  };
   slotArr = new Array(9);
   for (let i = 0; i < 9; i++) {
     if (i < invArr.length) slotArr[i] = invArr[i];
@@ -260,7 +289,13 @@ function draw() {
     wind.c.push();
     wind.c.tint(0, 255, 0, 100);
     for (let block of selected) {
+      let bool = block.b instanceof Piston && block.b.extendedAtStart;
+      if (bool) {
+        wind.c.push();
+        wind.c.tint(180, 20, 20, 100);
+      }
       block.b.show(wind.c, 0, block.x * 32, block.y * 32);
+      if (bool) wind.c.pop();
     }
     wind.c.pop();
     if (editing && grid) {
@@ -537,6 +572,14 @@ function putDownSelected(B = true) {
         deleteFromTimeline(blocks[block.x][block.y].block);
       blocks[block.x][block.y].block = block.b;
       blocks[block.x][block.y].movable = block.b.movable;
+    } else {
+      deleteFromTimeline(block.b);
+    }
+  }
+  for (let i = 0; i < selected.length; i++) {
+    let block = selected[i].b;
+    if (block instanceof Piston && block.extendedAtStart) {
+      block.extend(true);
     }
   }
   if (B) selected = [];
@@ -782,7 +825,7 @@ function mergeTimelineEnds(ind1, ind2) {
 }
 
 function keyPressed() {
-  if (!saveNameIn || document.activeElement.tagName != "INPUT") {
+  if (!saveNameIn || document.activeElement.tagName != 'INPUT') {
     for (let i = 1; i <= 9; i++) {
       if (key == i.toString()) {
         if (slot == 0) putDownSelected();
@@ -805,7 +848,7 @@ function keyPressed() {
       }
     } else if (keyCode == 71) {
       if (editing) grid = !grid;
-    } else if (keyCode == BACKSPACE || keyCode == DELETE) {
+    } else if ((editing && keyCode == BACKSPACE) || keyCode == DELETE) {
       if (selected.length > 0) {
         for (let block of selected) {
           deleteFromTimeline(block.b);
@@ -839,6 +882,22 @@ function keyPressed() {
       if (editing && slot == 0) putDownSelected(false);
     } else if (keyCode == 81) {
       slot = 0;
+    } else if (keyCode == 88) {
+      if (editing && slot == 0) {
+        for (let block of selected) {
+          if (block.b instanceof Piston) {
+            block.b.extendedAtStart = true;
+          }
+        }
+      }
+    } else if (keyCode == 90) {
+      if (editing && slot == 0) {
+        for (let block of selected) {
+          if (block.b instanceof Piston) {
+            block.b.extendedAtStart = false;
+          }
+        }
+      }
     } else if (keyCode == 79) {
       if (handlingOutput == false) {
         putDownSelected();
@@ -914,7 +973,7 @@ function keyPressed() {
           output.settings.context = outputG.drawingContext;
           gameTick = 0;
           for (let i = 0; i < outStartingTick - 1; i++) {
-            console.log("gameTick", gameTick);
+            console.log('gameTick', gameTick);
             timelineHandler();
           }
         });
@@ -1031,6 +1090,9 @@ function mouseReleased() {
         let y = floor(wind.getCMouseY() / 32);
         if (blocks[x][y].block != null) {
           let newBlock = blocks[x][y].block;
+          if (newBlock instanceof Piston && newBlock.extended) {
+            newBlock.retract(true);
+          }
           newBlock.p = undefined;
           mouseGridX = x;
           mouseGridY = y;
@@ -1050,6 +1112,9 @@ function mouseReleased() {
           putDownSelected();
           if (blocks[x][y].block != null) {
             let newBlock = blocks[x][y].block;
+            if (newBlock instanceof Piston && newBlock.extended) {
+              newBlock.retract(true);
+            }
             newBlock.p = undefined;
             selected = [{ b: newBlock, x: x, y: y }];
             blocks[x][y].block = null;
@@ -1078,6 +1143,9 @@ function mouseReleased() {
           if (inGridRange(gX, gY)) {
             if (blocks[gX][gY].block != null) {
               let newBlock = blocks[gX][gY].block;
+              if (newBlock instanceof Piston && newBlock.extended) {
+                newBlock.retract(true);
+              }
               newBlock.p = undefined;
               selected.push({ b: newBlock, x: gX, y: gY });
               blocks[gX][gY].block = null;
@@ -1371,7 +1439,7 @@ function saveEditor(name) {
       if (block != null)
         txt.push(
           `B${block.id} x${x} y${y}` +
-            (block.r != undefined ? ` r${block.r}` : '')
+            (block.r != undefined ? ` r${block.r}` : '') + (block instanceof Piston && block.extendedAtStart ? ' e' : '')
         );
       for (let i = 0; i < timeline.length; i++) {
         for (let j = 0; j < timeline[i].length; j++) {
@@ -1433,14 +1501,21 @@ function loadEditor(file) {
       let y;
       let rInd = str.indexOf('r');
       let r = null;
+      let eInd = str.indexOf('e');
+      let e = false;
       if (rInd != -1) {
-        r = parseInt(str.slice(rInd + 1));
+        if (eInd != -1) {
+          e = true;
+          r = parseInt(str.slice(rInd + 1, str.indexOf(' ', rInd)));
+        } else {
+          r = parseInt(str.slice(rInd + 1));
+        }
         y = parseInt(str.slice(yInd + 1, str.indexOf(' ', yInd)));
       } else {
         y = parseInt(str.slice(yInd + 1));
       }
       // console.log(ind, x, y, r);
-      invArr[ind].f(x, y, r);
+      invArr[ind].f(x, y, r, e);
       curBlock = blocks[x][y].block;
     } else if (str[0] == 'T') {
       let spaceInd = 1;
@@ -1474,6 +1549,14 @@ function loadEditor(file) {
         f: func,
         t: id,
       };
+    }
+  }
+  for (let i = 0; i < editorWidth; i++) {
+    for (let j = 0; j < editorHeight; j++) {
+      let block = blocks[i][j].block;
+      if (block instanceof Piston && block.extendedAtStart) {
+        block.extend(true);
+      }
     }
   }
   windowResized();

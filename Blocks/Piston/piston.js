@@ -1,11 +1,12 @@
 let pistonImages = [];
 
 class Piston {
-  constructor(p, r, s) {
+  constructor(p, r, s, extended = false, extendedAtStart = false) {
     this.p = p;
     this.r = r;
     this.sticky = s;
-    this.extended = false;
+    this.extended = extended;
+    this.extendedAtStart = extendedAtStart;
     this.extensionTick;
     this.retractionTick;
     this.extending = false;
@@ -129,7 +130,7 @@ class Piston {
     }
   }
 
-  extend() {
+  extend(atStart = false) {
     if (!this.extended && this.p.movable) {
       let dir;
       switch (this.r) {
@@ -160,12 +161,21 @@ class Piston {
           if (block == null) {
             this.extensionTick = gameTick;
             this.extended = true;
-            this.extending = true;
+            if (atStart) {
+              this.extending = false;
+            } else {
+              this.extending = true;
+            }
             this.p.movable = false;
             for (let i = l - 1; i >= 0; i--) {
               blocks[x][y].block = moveArr[i];
-              blocks[x][y].movable = false;
-              blocks[x][y].moving = true;
+              if (atStart) {
+                blocks[x][y].movable = true;
+                blocks[x][y].moving = false;
+              } else {
+                blocks[x][y].movable = false;
+                blocks[x][y].moving = true;
+              }
               blocks[x][y].movingTick = gameTick;
               blocks[x][y].moveR = this.r;
               moveArr[i].p = blocks[x][y];
@@ -183,11 +193,17 @@ class Piston {
     }
   }
 
-  retract() {
+  retract(atStart = false) {
     if (this.extended) {
       this.retractionTick = gameTick;
       this.extended = false;
-      this.retracting = true;
+      this.extending = false;
+      if (atStart) {
+        this.retracting = false;
+        this.p.movable = true;
+      } else {
+        this.retracting = true;
+      }
       let dir;
       switch (this.r) {
         case 0:
@@ -208,14 +224,14 @@ class Piston {
         let y = this.p.y + 2 * dir[1];
         if (this.inBounds(x, y)) {
           if (blocks[x][y].movable) {
-            if (blocks[x][y].block != null) {
+            if (blocks[x][y].block != null && !atStart) {
               let newBlock = blocks[this.p.x + dir[0]][this.p.y + dir[1]];
               blocks[x][y].block.p = newBlock;
               newBlock.block = blocks[x][y].block;
               newBlock.moving = true;
+              newBlock.movable = false;
               newBlock.movingTick = gameTick;
               newBlock.moveR = (this.r + 2) % 4;
-              newBlock.movable = false;
               blocks[x][y].block = null;
               blocks[x][y].movable = true;
             } else {
@@ -262,6 +278,12 @@ class Piston {
   }
 
   clone(p) {
-    return new Piston(p, this.r, this.sticky);
+    return new Piston(
+      p,
+      this.r,
+      this.sticky,
+      this.extended,
+      this.extendedAtStart
+    );
   }
 }
