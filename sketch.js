@@ -543,11 +543,17 @@ function selectedIncludes(x, y) {
 }
 
 function putDownSelected(B = true) {
+  let extendList = [];
   for (let i = 0; i < selected.length; i++) {
+    let block = selected[i];
     if (B) {
       block = selected[i];
     } else {
-      block = { b: selected[i].b.clone(), x: selected[i].x, y: selected[i].y };
+      block = {
+        b: selected[i].b.clone(),
+        x: selected[i].x,
+        y: selected[i].y,
+      };
       for (let j = 0; j < timeline.length; j++) {
         for (let k = 0; k < timeline[j].length; k++) {
           for (let l = timeline[j][k].length - 1; l >= 0; l--) {
@@ -566,21 +572,34 @@ function putDownSelected(B = true) {
         }
       }
     }
-    if (inGridRange(block.x, block.y)) {
-      block.b.p = blocks[block.x][block.y];
-      if (blocks[block.x][block.y].block != null)
+    if (
+      inGridRange(block.x, block.y) &&
+      !(
+        blocks[block.x][block.y].block === null &&
+        !blocks[block.x][block.y].movable
+      )
+    ) {
+      if (blocks[block.x][block.y].block != null) {
+        if (
+          blocks[block.x][block.y].block instanceof Piston &&
+          blocks[block.x][block.y].block.extendedAtStart
+        ) {
+          blocks[block.x][block.y].block.retract(true);
+        }
         deleteFromTimeline(blocks[block.x][block.y].block);
+      }
+      block.b.p = blocks[block.x][block.y];
+      if (block.b instanceof Piston && block.b.extendedAtStart) {
+        extendList.push(block.b);
+      }
       blocks[block.x][block.y].block = block.b;
       blocks[block.x][block.y].movable = block.b.movable;
     } else {
       deleteFromTimeline(block.b);
     }
   }
-  for (let i = 0; i < selected.length; i++) {
-    let block = selected[i].b;
-    if (block instanceof Piston && block.extendedAtStart) {
-      block.extend(true);
-    }
+  for (let block of extendList) {
+    block.extend(true);
   }
   if (B) selected = [];
 }
@@ -1079,9 +1098,19 @@ function mouseReleased() {
         if (slotArr[slot - 1] != undefined) {
           let x = floor(wind.getCMouseX() / 32);
           let y = floor(wind.getCMouseY() / 32);
-          if (inGridRange(x, y)) {
-            if (blocks[x][y].block != null)
+          if (
+            inGridRange(x, y) &&
+            !(blocks[x][y].block === null && !blocks[x][y].movable)
+          ) {
+            if (blocks[x][y].block != null) {
+              if (
+                blocks[x][y].block instanceof Piston &&
+                blocks[x][y].block.extendedAtStart
+              ) {
+                blocks[x][y].block.retract(true);
+              }
               deleteFromTimeline(blocks[x][y].block);
+            }
             slotArr[slot - 1].f(x, y);
           }
         }
@@ -1439,7 +1468,8 @@ function saveEditor(name) {
       if (block != null)
         txt.push(
           `B${block.id} x${x} y${y}` +
-            (block.r != undefined ? ` r${block.r}` : '') + (block instanceof Piston && block.extendedAtStart ? ' e' : '')
+            (block.r != undefined ? ` r${block.r}` : '') +
+            (block instanceof Piston && block.extendedAtStart ? ' e' : '')
         );
       for (let i = 0; i < timeline.length; i++) {
         for (let j = 0; j < timeline[i].length; j++) {
