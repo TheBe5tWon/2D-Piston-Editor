@@ -12,8 +12,8 @@ class Block {
     this.block = new StandardBlock(this, movable, id);
   }
 
-  newPiston(r, s) {
-    this.block = new Piston(this, r, s);
+  newPiston(r, s, e = false) {
+    this.block = new Piston(this, r, s, false, e);
   }
 
   show(c, i) {
