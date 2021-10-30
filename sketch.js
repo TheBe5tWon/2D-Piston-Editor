@@ -19,6 +19,7 @@ for (let i = 0; i < totalGameTicks; i++) {
   collapsed[i] = [];
 }
 
+let spaceInTimeline = 10;
 let timelineT = null;
 let gameTick = 0;
 let lastGameTickMS;
@@ -710,7 +711,7 @@ function limitTimeline() {
       if (collapsed[i][j] == false) h += 25 * timeline[i][j].length;
       h += 25;
     }
-    h += 25;
+    h += 25 * spaceInTimeline;
     if (h > maxH) maxH = h;
   }
   setWind('timeline');
