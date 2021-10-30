@@ -11,13 +11,11 @@ class Piston {
     this.retractionTick;
     this.extending = false;
     this.retracting = false;
-    this.g = createGraphics(64, 64);
     this.movable = true;
     this.id = this.sticky ? '001' : '000';
   }
 
   show(c, i, forceX = 0, forceY = 0) {
-    this.g.clear();
     let x;
     let y;
     let toNextBlock;

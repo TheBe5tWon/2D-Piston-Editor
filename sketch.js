@@ -77,6 +77,7 @@ let saveNameIn;
 let controls = [
   { p1: 'Space', s: 'Stop Animation', b: () => timelineT != null },
   { p1: 'Space', s: 'Play Animation' },
+  { p1: 'O', s: 'Output Gif'},
   { p1: 'G', s: 'Toggle Grid' },
   { p1: '1', p1s: '-', p2: '9', s: 'Select a slot' },
   { p1: 'click1', s: 'Place block', b: () => slot != 0 },
@@ -128,6 +129,47 @@ let controls = [
     s: 'Set Pistons To Retracted',
     b: () => checkSelectedForPistons(),
   },
+];
+
+let timelineControls = [
+  {
+    p1: 'click1',
+    s: 'Add Nodes in Timeline',
+    b: () => checkSelectedForPistons(),
+  },
+  {
+    p1: 'click1',
+    s: 'Select Node in Timeline',
+    b: () => selected.length == 0,
+  },
+  {
+    p1: 'click1',
+    p1s: '+',
+    p2: 'Shift',
+    s: 'Select Multiple Nodes',
+    b: () => selected.length == 0,
+  },
+  {
+    p1: 'drag',
+    p2: 'click1',
+    s: 'Move Selected Nodes',
+    b: () => timelineSelected.length > 0,
+  },
+  {
+    p1: 'drag',
+    p2: 'click1',
+    p2s: '+',
+    p3: 'Ctrl',
+    s: 'Move and Copy Selected Nodes',
+    b: () => timelineSelected.length > 0,
+  },
+  {
+    p1: 'Backspace',
+    p1s: 'or',
+    p2: 'Delete',
+    s: 'Delete Selcted Nodes',
+    b: () => timelineSelected.length > 0,
+  }
 ];
 
 let extensionF = (b) => b.extend();
@@ -427,68 +469,81 @@ function draw() {
       drawControl(controls[i], 5, y, defW);
       if (!controls[i].b || controls[i].b()) y += defW + 5;
     }
+    y = 5;
+    for (let i = 0; i < timelineControls.length; i++) {
+      drawControl(timelineControls[i], width - 5, y, defW, true);
+      if (!timelineControls[i].b || timelineControls[i].b()) y += defW + 5;
+    }
     noStroke();
     fill(0);
     textAlign(LEFT, TOP);
     textSize(12);
-    text(round(frameRate()), 0, 0);
+    text(`fps: ${round(frameRate())}`, 0, 0);
   }
 }
 
-function drawControl(c, x, y, dW) {
+function drawControl(c, x, y, dW, moveLeft = false) {
   if (c.b && !c.b()) return;
   let defW = dW;
   let midY = y + defW * 0.5;
   for (let j = 1; c[`p${j}`]; j++) {
     let p = `p${j}`;
     if (c[p]) {
-      let tW = textWidth(c[p]);
       setKeyText();
       switch (c[p]) {
         case 'click1':
+          if (moveLeft) x -= defW;
           image(click1Img, x, y, defW, defW);
-          x += defW + 5;
+          x += (defW + 5) * (moveLeft ? -1 : 1);
+          if (moveLeft) x += defW;
           break;
         case 'leftArrow':
+          if (moveLeft) x -= defW;
           controlBox(x, y, defW, defW);
           beginShape();
           vertex(x + 25, midY - 10);
           vertex(x + 10, midY);
           vertex(x + 25, midY + 10);
           endShape();
-          x += defW + 5;
+          x += (defW + 5) * (moveLeft ? -1 : 1);
+          if (moveLeft) x += defW;
           break;
         case 'rightArrow':
+          if (moveLeft) x -= defW;
           controlBox(x, y, defW, defW);
           beginShape();
           vertex(x + 10, midY - 10);
           vertex(x + 25, midY);
           vertex(x + 10, midY + 10);
           endShape();
-          x += defW + 5;
+          x += (defW + 5) * (moveLeft ? -1 : 1);
+          if (moveLeft) x += defW;
           break;
         case 'drag':
-          image(dragImg, x - defW * 0.4, y, defW, defW);
-          x += defW + 5 - defW * 0.6;
+          if (moveLeft) x -= defW * 0.8;
+          image(dragImg, x - (moveLeft ? 0 : defW * 0.4), y, defW, defW);
+          x += (defW * 0.4 + 5) * (moveLeft ? -1 : 1);
+          if (moveLeft) x += defW * 0.8;
           break;
         default:
           let tW = textWidth(c[p]);
           w = max(defW, tW + 20);
+          if (moveLeft) x -= w;
           controlBox(x, y, w, defW);
-          setKeyText();
           text(c[p], x + w * 0.5, midY);
-          x += w + 5;
+          x += (w + 5) * (moveLeft ? -1 : 1);
+          if (moveLeft) x += w;
           break;
       }
       let pS = p + 's';
       if (c[pS]) {
         let tW = textWidth(c[pS]);
-        text(c[pS], x + tW * 0.5, midY);
-        x += tW + 5;
+        text(c[pS], x + tW * 0.5 * (moveLeft ? -1 : 1), midY);
+        x += (tW + 5) * (moveLeft ? -1 : 1);
       }
     }
   }
-  setStringText();
+  setStringText(moveLeft);
   text(c.s, x, midY);
 }
 
@@ -507,10 +562,10 @@ function setKeyText() {
   textAlign(CENTER, CENTER);
 }
 
-function setStringText() {
+function setStringText(moveLeft) {
   textSize(18);
   textStyle(NORMAL);
-  textAlign(LEFT, CENTER);
+  textAlign(moveLeft ? RIGHT : LEFT, CENTER);
 }
 
 function calcStart() {
@@ -875,12 +930,6 @@ function keyPressed() {
         }
       } else if (timelineSelected.length > 0) {
         deleteTimelineSelected();
-      }
-      if (!keyIsDown(CONTROL)) {
-        for (let ob of selected) {
-          if (ob.b.g) ob.b.g.remove();
-        }
-        selected = [];
       }
     } else if (keyCode == LEFT_ARROW) {
       if (editing) {
