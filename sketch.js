@@ -138,6 +138,15 @@ let timelineControls = [
     b: () => checkSelectedForPistons(),
   },
   {
+    p1: 'Backspace',
+    p1s: 'or',
+    p2: 'Delete',
+    p2s: '+',
+    p3: 'Ctrl',
+    s: 'Delete Associated Nodes',
+    b: () => checkSelectedForPistons(),
+  },
+  {
     p1: 'click1',
     s: 'Select Node in Timeline',
     b: () => selected.length == 0,
@@ -930,6 +939,9 @@ function keyPressed() {
         }
       } else if (timelineSelected.length > 0) {
         deleteTimelineSelected();
+      }
+      if (!keyIsDown(CONTROL)) {
+        selected = [];
       }
     } else if (keyCode == LEFT_ARROW) {
       if (editing) {
